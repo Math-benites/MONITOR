@@ -2005,6 +2005,58 @@
     background-color: #0849a3;
 }
 
+#toast-root {
+    display: none;
+}
+
+.toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.toast {
+    min-width: 260px;
+    max-width: 360px;
+    background: #fff;
+    color: #111;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 18px 40px rgba(15,23,42,0.25);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    font-weight: 600;
+    pointer-events: auto;
+    border-left: 4px solid transparent;
+}
+
+.toast--visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast--info {
+    border-color: #0d6efd;
+}
+
+.toast--success {
+    border-color: #198754;
+}
+
+.toast--error {
+    border-color: #dc3545;
+}
+
+.toast--warning {
+    border-color: #ffc107;
+}
+
 /* central-menu cards continuam iguais */
 .login-card {
     background: #fff;

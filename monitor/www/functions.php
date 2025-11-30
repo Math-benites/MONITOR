@@ -1,4 +1,7 @@
 <?php
+if(session_status() === PHP_SESSION_NONE){
+    session_start();
+}
 $data_dir = defined('DATA_DIR') ? DATA_DIR : '/data';
 $settings_file = "$data_dir/settings.json";
 
@@ -229,5 +232,29 @@ function card_dashboard($title, $value, $icon = null) {
     echo "<strong>{$value}</strong>";
     echo "<span>{$title}</span>";
     echo "</div>";
+}
+
+function add_toast(string $message, string $type = 'info', int $duration = 4000): void {
+    if(!isset($_SESSION['global_toasts']) || !is_array($_SESSION['global_toasts'])){
+        $_SESSION['global_toasts'] = [];
+    }
+    $_SESSION['global_toasts'][] = [
+        'message' => $message,
+        'type' => $type,
+        'duration' => $duration
+    ];
+}
+
+function get_toasts(): array {
+    $toasts = $_SESSION['global_toasts'] ?? [];
+    unset($_SESSION['global_toasts']);
+    return $toasts;
+}
+
+function render_toasts(array $toasts = null): void {
+    $queue = $toasts === null ? get_toasts() : $toasts;
+    if(empty($queue)) return;
+    $json = htmlspecialchars(json_encode($queue, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+    echo "<div id=\"toast-root\" data-toasts=\"{$json}\"></div>";
 }
 ?>

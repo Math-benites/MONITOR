@@ -1,16 +1,5 @@
 <?php
-session_start();
 require_once __DIR__ . '/../functions.php';
-
-function billing_add_flash(string $type, string $message): void {
-    if(!isset($_SESSION['billing_flash']) || !is_array($_SESSION['billing_flash'])){
-        $_SESSION['billing_flash'] = [];
-    }
-    $_SESSION['billing_flash'][] = [
-        'type' => $type,
-        'message' => $message
-    ];
-}
 
 $server_name = $_GET['server'] ?? $servers[0]['name'] ?? null;
 $server_info = get_server($server_name);
@@ -189,7 +178,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         }
         file_put_contents($history_file_path, json_encode($invoice_history, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
         $invoice_link = "/client/invoice.php?server=" . urlencode($server_name) . "&group=" . urlencode($group_id) . "&history_id=" . urlencode($entry['id']);
-        billing_add_flash('success', 'Boleto emitido com sucesso. <a href="' . htmlspecialchars($invoice_link, ENT_QUOTES) . '" target="_blank" rel="noopener">Abrir boleto</a>.');
+        add_toast('Boleto emitido com sucesso. <a href="' . htmlspecialchars($invoice_link, ENT_QUOTES) . '" target="_blank" rel="noopener">Abrir boleto</a>.', 'success');
     } elseif($action === 'update_status'){
         $id = $_POST['record_id'] ?? '';
         $newStatus = $_POST['status'] ?? '';
@@ -213,7 +202,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         file_put_contents($history_file_path, json_encode($invoice_history, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
         $current_history = array_values(array_filter($invoice_history, fn($entry) => ($entry['server_account'] ?? '') === $server_code && ($entry['group_id'] ?? '') === $group_detail['usrgrpid']));
         usort($current_history, fn($a,$b)=>strcmp($b['issued_at'] ?? '', $a['issued_at'] ?? ''));
-        billing_add_flash('success', 'Status atualizado para ' . htmlspecialchars($newStatus));
+        add_toast('Status atualizado para ' . htmlspecialchars($newStatus), 'success');
     } elseif($action === 'duplicate_invoice'){
         $id = $_POST['record_id'] ?? '';
         $record = null;
@@ -229,9 +218,9 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
                 'due_date' => (new DateTimeImmutable($record['due_date'] ?? 'now', $timezone))->format('Y-m-d'),
                 'description' => $record['description'] ?? ''
             ];
-            billing_add_flash('info', 'Cobrança duplicada. Ajuste os campos e clique em Emitir.');
+            add_toast('Cobrança duplicada. Ajuste os campos e clique em Emitir.', 'info');
         } else {
-            billing_add_flash('error', 'Não foi possível localizar a cobrança para duplicar.');
+            add_toast('Não foi possível localizar a cobrança para duplicar.', 'error');
         }
     } elseif($action === 'mark_all_paid'){
         $bulk_status = $_POST['status_filter'] ?? 'all';
@@ -256,9 +245,9 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
                 mkdir(dirname($history_file_path), 0755, true);
             }
             file_put_contents($history_file_path, json_encode($invoice_history, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
-            billing_add_flash('success', "{$updated} cobranç" . ($updated === 1 ? 'a' : 'as') . " marcad" . ($updated === 1 ? 'a' : 'as') . " como paga.");
+            add_toast("{$updated} cobranç" . ($updated === 1 ? 'a' : 'as') . " marcad" . ($updated === 1 ? 'a' : 'as') . " como paga.", 'success');
         } else {
-            billing_add_flash('info', 'Nenhuma cobrança foi atualizada com os filtros atuais.');
+            add_toast('Nenhuma cobrança foi atualizada com os filtros atuais.', 'info');
         }
     } elseif($action === 'export_csv'){
         $export_status = $_POST['status_filter'] ?? 'all';
@@ -294,9 +283,6 @@ unset($_SESSION['billing_prefill']);
 $amount_input_value = $prefill_state['amount'] ?? number_format($display_revenue, 2, '.', '');
 $due_input_value = $prefill_state['due_date'] ?? $cycle_end->format('Y-m-d');
 $description_input_value = $prefill_state['description'] ?? "Cobrança referente ao ciclo {$billing_cycle_day}";
-$flash_messages = $_SESSION['billing_flash'] ?? [];
-unset($_SESSION['billing_flash']);
-
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -307,21 +293,14 @@ unset($_SESSION['billing_flash']);
     <link rel="icon" type="image/svg+xml" href="/img/infrastack.svg">
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="/css/cards.css">
+    <script defer src="/js/toasts.js"></script>
 </head>
 <body>
+    <?php render_toasts(); ?>
     <div class="billing-page-shell">
         <div class="client-back-link-wrapper">
             <a href="/client/client.php?server=<?= urlencode($server_name) ?>&group=<?= urlencode($group_id) ?>" class="client-back-link">← Voltar</a>
         </div>
-        <?php if(!empty($flash_messages)): ?>
-            <div class="billing-flash-wrapper">
-                <?php foreach($flash_messages as $flash): ?>
-                    <div class="billing-flash billing-flash--<?= htmlspecialchars($flash['type']) ?>">
-                        <?= $flash['message'] ?>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
         <div class="invoice-shell">
         <header class="invoice-header">
             <div>
