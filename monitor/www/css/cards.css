@@ -659,7 +659,7 @@
 }
 
 .invoice-shell {
-    width: min(1100px, 96vw);
+    width: min(1280px, 98vw);
     margin: 30px auto 60px;
     background: #fff;
     border-radius: 26px;
@@ -770,6 +770,8 @@
     color: #fff;
     cursor: pointer;
     font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1;
     box-shadow: 0 12px 28px rgba(13,110,253,0.3);
 }
 
@@ -786,6 +788,25 @@
 
 .print-button--outline:hover {
     background: #f0f5ff;
+}
+
+.print-button--link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    padding: 12px 20px;
+    background: #0d6efd;
+    color: #fff;
+    font-weight: 600;
+    font-size: inherit;
+    text-decoration: none;
+    box-shadow: 0 12px 28px rgba(13,110,253,0.3);
+}
+
+.print-button--link:hover {
+    background: #0849a3;
+    color: #fff;
 }
 
 .invoice-section {
@@ -957,6 +978,8 @@
     text-align: left;
     padding: 12px 8px;
     border-bottom: 1px solid rgba(0,0,0,0.08);
+    vertical-align: middle;
+    white-space: nowrap;
 }
 
 .invoice-table th {
@@ -1147,12 +1170,20 @@
 .invoice-table-actions {
     display: flex;
     gap: 10px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
 }
 
+.invoice-table-actions .invoice-status-form,
+.invoice-table-actions form {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
 .invoice-status-form {
-    display: flex;
+    display: inline-flex;
     gap: 8px;
     align-items: center;
 }
@@ -1162,6 +1193,148 @@
     border: 1px solid rgba(13,110,253,0.25);
     padding: 6px 10px;
     font-size: 0.9rem;
+    min-width: 120px;
+}
+
+.invoice-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+}
+
+.invoice-status-badge--pending {
+    background: rgba(255,193,7,0.2);
+    color: #b88600;
+}
+
+.invoice-status-badge--paid {
+    background: rgba(25,135,84,0.15);
+    color: #198754;
+}
+
+.invoice-status-badge--cancelled {
+    background: rgba(108,117,125,0.2);
+    color: #6c757d;
+}
+
+.billing-filter-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px 16px;
+    margin: 12px 0 12px;
+    background: rgba(248,249,255,0.8);
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(13,110,253,0.15);
+}
+
+.billing-filter-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: #4a4a4a;
+    min-width: 180px;
+}
+
+.billing-filter-form input,
+.billing-filter-form select {
+    border-radius: 10px;
+    border: 1px solid rgba(13,110,253,0.25);
+    padding: 8px 10px;
+    font-size: 0.95rem;
+    background: #fff;
+}
+
+.billing-filter-search {
+    flex: 1;
+    min-width: 220px;
+}
+
+.billing-filter-buttons {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.filter-reset-link {
+    font-size: 0.9rem;
+    color: #0d6efd;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.billing-filter-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+    justify-content: flex-end;
+}
+
+.billing-inline-form {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.print-button--secondary {
+    background: rgba(13,110,253,0.1);
+    color: #0d6efd;
+}
+
+.print-button--secondary:hover {
+    background: rgba(13,110,253,0.2);
+    color: #0b5ed7;
+}
+
+.print-button--danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+.print-button--danger:hover {
+    background: #b02a37;
+}
+
+.billing-flash-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.billing-flash {
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+}
+
+.billing-flash--success {
+    background: rgba(25,135,84,0.15);
+    color: #0f5132;
+    border-color: rgba(25,135,84,0.3);
+}
+
+.billing-flash--info {
+    background: rgba(13,110,253,0.12);
+    color: #0d6efd;
+    border-color: rgba(13,110,253,0.3);
+}
+
+.billing-flash--error {
+    background: rgba(220,53,69,0.1);
+    color: #842029;
+    border-color: rgba(220,53,69,0.3);
 }
 
 .billing-head {
@@ -1839,6 +2012,58 @@
 
 .select-card button:hover {
     background-color: #0849a3;
+}
+
+#toast-root {
+    display: none;
+}
+
+.toast-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.toast {
+    min-width: 260px;
+    max-width: 360px;
+    background: #fff;
+    color: #111;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 18px 40px rgba(15,23,42,0.25);
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    font-weight: 600;
+    pointer-events: auto;
+    border-left: 4px solid transparent;
+}
+
+.toast--visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast--info {
+    border-color: #0d6efd;
+}
+
+.toast--success {
+    border-color: #198754;
+}
+
+.toast--error {
+    border-color: #dc3545;
+}
+
+.toast--warning {
+    border-color: #ffc107;
 }
 
 /* central-menu cards continuam iguais */
