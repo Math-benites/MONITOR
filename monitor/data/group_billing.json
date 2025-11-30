@@ -1,0 +1,25 @@
+{
+    "s1_14": {
+        "selected_plan_limit": 100,
+        "selected_plan_name": "Plano básico 100 hosts",
+        "plan_value": 950,
+        "per_host_value": 9.5,
+        "over_hosts": 0,
+        "extra_host_rate": 9.5,
+        "revenue": 0,
+        "updated_at": "2025-11-29T02:13:46+00:00",
+        "invoice_history": [
+            {
+                "id": "542f0f2658b8",
+                "server_account": null,
+                "group_id": "14",
+                "amount": 1140,
+                "status": "Pendente",
+                "issued_at": "2025-11-29T12:39:17-03:00",
+                "due_date": "2025-12-13T00:00:00-03:00",
+                "description": "Cobrança referente ao ciclo <br \/><b>Warning<\/b>:  Undefined variable $cycle_day_label in <b>\/var\/www\/html\/client\/billing_manage.php<\/b> on line <b>203<\/b><br \/>",
+                "hosts_peak": 120
+            }
+        ]
+    }
+}

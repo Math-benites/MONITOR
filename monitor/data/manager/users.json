@@ -1,0 +1,8 @@
+[
+    {
+        "username": "admin",
+        "password": "infrastack@100",
+        "name": "InfraStack Admin",
+        "role": "administrator"
+    }
+]

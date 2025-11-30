@@ -1,0 +1,41 @@
+
+services:
+  php-monitor:
+    build: 
+      context: ./monitor
+    container_name: php_monitor
+    ports:
+      - "8080:80"
+    volumes:
+      - ./monitor/www:/var/www/html
+      - ./monitor/data:/data
+      - ./monitor/scripts:/var/www/scripts:ro
+
+    environment:
+      - TZ=America/Sao_Paulo
+    networks:
+      zbx_net_backend:
+      zbx_net_frontend:
+
+  history-collector:
+    build:
+      context: ./monitor
+    container_name: php_history_collector
+    command: ["bash", "/var/www/scripts/collector-loop.sh"]
+    volumes:
+      - ./monitor:/var/www
+    environment:
+      - TZ=America/Sao_Paulo
+    restart: unless-stopped
+    networks:
+      zbx_net_backend:
+      zbx_net_frontend:
+
+networks:
+  zbx_net_frontend:
+    external: true
+    name: monitoring_frontend
+  zbx_net_backend:
+    external: true
+    name: monitoring_backend
+

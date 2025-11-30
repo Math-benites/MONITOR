@@ -1,0 +1,48 @@
+[
+  {
+    "typeday": "121d",
+    "plans": [
+      {
+        "name": "Plano básico 100 hosts",
+        "host_limit": 100,
+        "valor": 950,
+        "desconto": 0
+      },
+      {
+        "name": "Plano básico 200 hosts",
+        "host_limit": 200,
+        "valor": 1805,
+        "desconto": 5
+      },
+      {
+        "name": "Plano básico 300 hosts",
+        "host_limit": 300,
+        "valor": 2565,
+        "desconto": 10
+      }
+    ]
+  },
+  {
+    "typeday": "365d",
+    "plans": [
+      {
+        "name": "Plano anual 100 hosts",
+        "host_limit": 100,
+        "valor": 900,
+        "desconto": 0
+      },
+      {
+        "name": "Plano anual 200 hosts",
+        "host_limit": 200,
+        "valor": 1674,
+        "desconto": 7
+      },
+      {
+        "name": "Plano anual 300 hosts",
+        "host_limit": 300,
+        "valor": 2430,
+        "desconto": 10
+      }
+    ]
+  }
+]

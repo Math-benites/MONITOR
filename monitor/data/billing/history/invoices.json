@@ -1,0 +1,16 @@
+[
+    {
+        "id": "cbd95e29e02a",
+        "server_account": "s1",
+        "group_id": "14",
+        "amount": 1140,
+        "status": "Pago",
+        "issued_at": "2025-11-29T12:43:32-03:00",
+        "due_date": "2025-12-13T00:00:00-03:00",
+        "description": "paga eu",
+        "hosts_peak": 120,
+        "plan_name": "Plano básico 100 hosts",
+        "cycle_start": "2025-11-14T00:00:00-03:00",
+        "cycle_end": "2025-12-13T00:00:00-03:00"
+    }
+]
