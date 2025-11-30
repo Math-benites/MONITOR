@@ -209,7 +209,9 @@ $recommended_plan_label = $recommended_plan
     : '';
 $plan_limit_display = intval($selected_plan['host_limit'] ?? 0);
 $used_hosts = $total_hosts_access;
-$limit_percent = $plan_limit_display > 0 ? min(100, ($used_hosts / $plan_limit_display) * 100) : 0;
+$limit_percent_raw = $plan_limit_display > 0 ? ($used_hosts / max(1, $plan_limit_display)) * 100 : 0;
+$limit_percent = $plan_limit_display > 0 ? min(100, max(0, $limit_percent_raw)) : 0;
+$limit_overflow_percent = $plan_limit_display > 0 ? max(0, $limit_percent_raw - 100) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -419,6 +421,18 @@ $limit_percent = $plan_limit_display > 0 ? min(100, ($used_hosts / $plan_limit_d
     $chart_values = array_column($history_display, 'hosts');
     $history_max_hosts = !empty($history_display) ? max($chart_values) : 0;
     $history_avg_hosts = !empty($history_display) ? round(array_sum($chart_values) / count($chart_values)) : 0;
+    $history_peak_percent = $plan_limit_display > 0
+        ? ($history_max_hosts > 0 ? ($history_max_hosts / max(1, $plan_limit_display)) * 100 : 0)
+        : null;
+    $history_peak_hosts_remaining = $plan_limit_display > 0
+        ? max(0, $plan_limit_display - $history_max_hosts)
+        : null;
+    $history_peak_note = $plan_limit_display > 0
+        ? $history_peak_hosts_remaining . ' host' . ($history_peak_hosts_remaining === 1 ? '' : 's') . ' restantes para o limite.'
+        : 'Plano sem limite definido no momento.';
+    $history_peak_overflow_percent = $history_peak_percent !== null
+        ? max(0, $history_peak_percent - 100)
+        : null;
     $chart_labels = array_map(function($entry) use ($timezone){
         $dt = (new DateTimeImmutable('@' . intval($entry['timestamp'] ?? 0)))->setTimezone($timezone);
         return $dt->format('d/m H:i');
@@ -457,8 +471,20 @@ $limit_percent = $plan_limit_display > 0 ? min(100, ($used_hosts / $plan_limit_d
                 <div class="history-metrics-column">
                     <div class="history-metric-card">
                         <span class="history-metric-label">Pico máximo (30 dias)</span>
-                        <strong><?= number_format($history_max_hosts, 0, ',', '.') ?> hosts</strong>
-                        <small>Maior valor registrado</small>
+                        <?php if($plan_limit_display > 0): ?>
+                            <strong><?= number_format($history_peak_percent, 1, ',', '.') ?>%</strong>
+                            <small><?= number_format($history_max_hosts, 0, ',', '.') ?> hosts</small>
+                            <div class="history-metric-progress history-metric-progress--overflow">
+                                <div class="history-metric-progress-fill" style="width: <?= min(100, max(0, $history_peak_percent)) ?>%;"></div>
+                                <?php if($history_peak_overflow_percent > 0): ?>
+                                    <div class="history-metric-progress-overflow" style="width: <?= min(100, $history_peak_overflow_percent) ?>%;"></div>
+                                <?php endif; ?>
+                            </div>
+                            <p class="history-metric-note"><?= $history_peak_note ?></p>
+                        <?php else: ?>
+                            <strong><?= number_format($history_max_hosts, 0, ',', '.') ?> hosts</strong>
+                            <small>Maior valor registrado</small>
+                        <?php endif; ?>
                     </div>
                     <div class="history-metric-card">
                         <span class="history-metric-label">Média de hosts</span>
@@ -466,11 +492,14 @@ $limit_percent = $plan_limit_display > 0 ? min(100, ($used_hosts / $plan_limit_d
                         <small>Leituras dos últimos 30 dias</small>
                     </div>
                     <div class="history-metric-card history-metric-card--capacity">
-                        <span class="history-metric-label">Capacidade utilizada</span>
+                        <span class="history-metric-label">Capacidade atual</span>
                         <strong><?= number_format($limit_percent, 1, ',', '.') ?>%</strong>
                         <small><?= $plan_limit_display > 0 ? "{$plan_limit_display} hosts" : 'Plano sem limite' ?></small>
-                        <div class="history-metric-progress">
+                        <div class="history-metric-progress history-metric-progress--overflow">
                             <div class="history-metric-progress-fill" style="width: <?= min(100, max(0, $limit_percent)) ?>%;"></div>
+                            <?php if($limit_overflow_percent > 0): ?>
+                                <div class="history-metric-progress-overflow" style="width: <?= min(100, $limit_overflow_percent) ?>%;"></div>
+                            <?php endif; ?>
                         </div>
                         <p class="history-metric-note">
                             <?= $plan_limit_display > 0
@@ -484,28 +513,6 @@ $limit_percent = $plan_limit_display > 0 ? min(100, ($used_hosts / $plan_limit_d
         <?php else: ?>
             <p class="empty-state">Ainda não há registros históricos. Execute o coletor diário para começar o acompanhamento.</p>
         <?php endif; ?>
-        <div class="strategy-details">
-            <div class="strategy-detail-card">
-                <strong>Próximo plano estratégico</strong>
-                <p class="strategy-detail-sub">
-                    <?= $recommended_plan_label ?: 'Nenhuma recomendação disponível.' ?>
-                </p>
-                <?php if($recommended_plan): ?>
-                    <p class="strategy-detail-note">
-                        Valor sugerido R$ <?= format_money($recommended_plan['valor'] ?? 0) ?> • <?= intval($recommended_plan['host_limit'] ?? 0) ?> hosts
-                    </p>
-                <?php endif; ?>
-            </div>
-            <div class="strategy-detail-card">
-                <strong>Custo extra</strong>
-                <p class="strategy-detail-sub">
-                    R$ <?= format_money($extra_host_rate) ?> por host além do limite.
-                </p>
-                <p class="strategy-detail-note">
-                    Upgrade traz receita extra e permite hosts ilimitados ao adotar o próximo plano.
-                </p>
-            </div>
-        </div>
     </div>
 </div>
 
