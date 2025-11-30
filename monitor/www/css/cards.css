@@ -1193,35 +1193,6 @@
     gap: 16px;
 }
 
-.billing-totals {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 16px;
-    background: rgba(13,110,253,0.05);
-    border-radius: 16px;
-    padding: 18px;
-    border: 1px solid rgba(13,110,253,0.15);
-    box-shadow: inset 0 0 0 1px rgba(13,110,253,0.08);
-}
-
-.billing-totals div {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.billing-totals span {
-    font-size: 0.8rem;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-
-.billing-totals strong {
-    font-size: 1.6rem;
-    color: #111;
-}
-
 .billing-actions {
     background: rgba(248,249,255,0.85);
     border-radius: 16px;
@@ -1233,20 +1204,188 @@
     box-shadow: 0 12px 24px rgba(15,23,42,0.08);
 }
 
-.billing-actions__title {
+.billing-actions__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.billing-actions__eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.billing-actions__intro {
+    margin: 4px 0 0;
+    color: #1f2937;
+    font-size: 0.95rem;
+}
+
+.billing-actions__chip {
+    border-radius: 12px;
+    border: 1px solid rgba(13,110,253,0.25);
+    background: rgba(13,110,253,0.08);
+    padding: 10px 14px;
+    min-width: 180px;
+    box-shadow: inset 0 0 0 1px rgba(13,110,253,0.08);
+}
+
+.billing-actions__chip strong {
+    display: block;
+    color: #0d6efd;
+    font-size: 1rem;
+}
+
+.billing-actions__chip small {
+    display: block;
+    margin-top: 2px;
+    color: #0d6efd;
+    opacity: 0.8;
+    font-size: 0.85rem;
+}
+
+.billing-actions__stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.billing-actions__stat {
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid rgba(13,110,253,0.2);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.billing-actions__stat span {
+    font-size: 0.75rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.billing-actions__stat strong {
+    font-size: 1.4rem;
+    color: #0f172a;
+}
+
+.billing-actions__stat small {
+    font-size: 0.85rem;
+    color: #4a4a4a;
+}
+
+.billing-actions__label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #0d6efd;
+    margin-top: 8px;
+    display: block;
+}
+
+.billing-actions__note {
+    margin-top: 4px;
+}
+
+.plan-options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 14px;
+}
+
+.plan-option-card {
+    position: relative;
+    border: 1px solid rgba(15,23,42,0.12);
+    border-radius: 16px;
+    padding: 14px 16px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.plan-option-card input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.plan-option-card__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
+}
+
+.plan-option-card__name {
     font-weight: 600;
+    color: #0f172a;
+}
+
+.plan-option-card__badge {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #0d6efd;
+    border: 1px solid rgba(13,110,253,0.35);
+    border-radius: 999px;
+    padding: 2px 8px;
+}
+
+.plan-option-card__value {
+    font-size: 1.5rem;
     color: #0d6efd;
 }
 
-.billing-actions__tag {
+.plan-option-card__hosts {
+    font-size: 0.9rem;
+    color: #4a4a4a;
+}
+
+.plan-option-card__note {
     font-size: 0.85rem;
-    background: rgba(13,110,253,0.1);
-    color: #0d6efd;
-    border-radius: 999px;
-    padding: 2px 10px;
+    color: #6c757d;
+}
+
+.plan-option-card__discount {
+    font-size: 0.75rem;
+    color: #198754;
+    font-weight: 600;
+}
+
+.plan-option-card--selected {
+    border-color: rgba(13,110,253,0.6);
+    box-shadow: 0 12px 24px rgba(13,110,253,0.15);
+    transform: translateY(-2px);
+}
+
+.plan-option-card--recommended {
+    background: rgba(13,110,253,0.05);
+}
+
+.plan-option-card:hover {
+    border-color: rgba(13,110,253,0.45);
+    box-shadow: 0 10px 20px rgba(15,23,42,0.12);
+}
+
+.plan-options-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.plan-options-actions__help {
+    font-size: 0.85rem;
+    color: #6c757d;
 }
 
 .billing-select-row {
