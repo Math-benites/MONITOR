@@ -69,4 +69,4 @@ docker compose up -d --build
 
 ## Licença
 
-Este projeto é distribuído sob a licença MIT. Consulte o arquivo `LICENSE` para detalhes.
+Distribuído sob uma licença MIT adaptada para uso **não comercial**. Consulte o arquivo `LICENSE` para os termos completos e entre em contato caso precise de autorização para uso comercial.
