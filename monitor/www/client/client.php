@@ -212,6 +212,45 @@ $used_hosts = $total_hosts_access;
 $limit_percent_raw = $plan_limit_display > 0 ? ($used_hosts / max(1, $plan_limit_display)) * 100 : 0;
 $limit_percent = $plan_limit_display > 0 ? min(100, max(0, $limit_percent_raw)) : 0;
 $limit_overflow_percent = $plan_limit_display > 0 ? max(0, $limit_percent_raw - 100) : 0;
+$selected_limit_label = $selected_limit > 0 ? sprintf('%d hosts', $selected_limit) : 'Sem limite definido';
+if($selected_limit > 0){
+    $plan_capacity_difference = $selected_limit - $total_hosts_access;
+    if($plan_capacity_difference > 0){
+        $plan_capacity_note = $plan_capacity_difference . ' host' . ($plan_capacity_difference === 1 ? '' : 's') . ' livre' . ($plan_capacity_difference === 1 ? '' : 's');
+    } elseif($plan_capacity_difference === 0){
+        $plan_capacity_note = 'No limite contratado';
+    } else {
+        $plan_capacity_note = 'Excedendo em ' . abs($plan_capacity_difference) . ' host' . (abs($plan_capacity_difference) === 1 ? '' : 's');
+    }
+} else {
+    $plan_capacity_note = 'Selecione um plano para definir o limite.';
+}
+$recommended_plan_hint = '';
+if($recommended_plan){
+    $recommended_hint_parts = [];
+    $recommended_value = floatval($recommended_plan['valor'] ?? 0);
+    $recommended_limit = intval($recommended_plan['host_limit'] ?? 0);
+    if($recommended_value > 0){
+        $recommended_hint_parts[] = 'R$ ' . format_money($recommended_value);
+    }
+    if($recommended_limit > 0){
+        $recommended_hint_parts[] = "{$recommended_limit} hosts";
+    }
+    $recommended_plan_hint = implode(' • ', $recommended_hint_parts);
+}
+$history_peak_percent = null;
+$recommended_chip_title = $recommended_plan_label;
+$recommended_chip_subtitle = $recommended_plan_hint;
+if($recommended_plan_label && $history_peak_percent !== null && $history_peak_percent > 100){
+    $overflow_pct = number_format($history_peak_percent - 100, 1, ',', '.');
+    $recommended_chip_title = "Pico excedeu {$overflow_pct}%";
+    $recommended_chip_subtitle = 'Considere ' . $recommended_plan_label;
+    if($recommended_plan_hint){
+        $recommended_chip_subtitle .= " ({$recommended_plan_hint})";
+    }
+} elseif(!$recommended_chip_subtitle && $recommended_plan_label){
+    $recommended_chip_subtitle = 'Sugestão automática de upgrade';
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -333,58 +372,79 @@ $limit_overflow_percent = $plan_limit_display > 0 ? max(0, $limit_percent_raw - 
                 class="billing-form">
                 <input type="hidden" name="action" value="save_plan">
                 <div class="billing-grid">
-                    <div class="billing-totals">
-                        <div>
-                            <span>Plano selecionado</span>
-                            <strong><?= htmlspecialchars($selected_plan_name) ?></strong>
-                        </div>
-                        <div>
-                            <span>Valor do plano</span>
-                            <strong>R$ <?= format_money($display_plan_value) ?></strong>
-                        </div>
-                        <div>
-                            <span>Receita prevista</span>
-                            <strong>R$ <?= format_money($display_revenue) ?></strong>
-                        </div>
-                        <div>
-                            <span>Valor por host (plano)</span>
-                            <strong>R$ <?= format_money($display_per_host_plan) ?></strong>
-                        </div>
-                </div>
                     <div class="billing-actions">
-                        <div class="billing-actions__title">
-                            <span>Escolha um plano</span>
+                        <div class="billing-actions__header">
+                            <div>
+                                <span class="billing-actions__eyebrow">Escolha um plano</span>
+                                <p class="billing-actions__intro">Ajuste o limite contratado antes de faturar este grupo.</p>
+                            </div>
                             <?php if($recommended_plan_label): ?>
-                                <small class="billing-actions__tag">Sugestão: <?= htmlspecialchars($recommended_plan_label) ?></small>
+                                <div class="billing-actions__chip">
+                                    <strong><?= htmlspecialchars($recommended_chip_title) ?></strong>
+                                    <?php if($recommended_chip_subtitle): ?>
+                                        <small><?= htmlspecialchars($recommended_chip_subtitle) ?></small>
+                                    <?php endif; ?>
+                                </div>
                             <?php endif; ?>
                         </div>
-                        <div class="billing-select-row">
-                            <select id="planLimit" name="plan_limit">
-                                <?php foreach($plan_options as $plan): ?>
-                                    <?php
-                                        $plan_limit = max(0, intval($plan['host_limit'] ?? 0));
-                                        $plan_value = floatval($plan['valor'] ?? 0);
-                                        $discount = intval($plan['desconto'] ?? 0);
-                                        $discount_label = $discount > 0 ? "{$discount}% desconto" : 'sem desconto';
-                                        $option_label = sprintf('%d hosts - R$ %s - %s',
-                                            $plan_limit,
-                                            format_money($plan_value),
-                                            $discount_label
-                                        );
-                                    ?>
-                                    <option value="<?= $plan_limit ?>" <?= $plan_limit === $selected_limit ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($option_label) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
+                        <div class="billing-actions__stat-grid">
+                            <div class="billing-actions__stat">
+                                <span>Hosts atuais</span>
+                                <strong><?= $total_hosts_access ?></strong>
+                                <small><?= $total_hosts_access === 1 ? '1 host monitorado' : "{$total_hosts_access} hosts monitorados" ?></small>
+                            </div>
+                            <div class="billing-actions__stat">
+                                <span>Limite do plano</span>
+                                <strong><?= htmlspecialchars($selected_limit_label) ?></strong>
+                                <small><?= htmlspecialchars($plan_capacity_note) ?></small>
+                            </div>
+                            <div class="billing-actions__stat">
+                                <span>Valor mensal</span>
+                                <strong>R$ <?= format_money($display_plan_value) ?></strong>
+                                <small>Extra R$ <?= format_money($extra_host_rate) ?>/host</small>
+                            </div>
+                        </div>
+                        <span class="billing-actions__label">Atualize o plano selecionado</span>
+                        <div class="plan-options-grid">
+                            <?php foreach($plan_options as $plan): ?>
+                                <?php
+                                    $plan_limit = max(0, intval($plan['host_limit'] ?? 0));
+                                    $plan_value = floatval($plan['valor'] ?? 0);
+                                    $discount = intval($plan['desconto'] ?? 0);
+                                    $is_selected_plan = $plan_limit === $selected_limit;
+                                    $is_recommended_plan = $recommended_plan && intval($recommended_plan['host_limit'] ?? 0) === $plan_limit;
+                                    $plan_name = $plan['name'] ?? "Plano {$plan_limit}";
+                                    $per_host_label = ($plan_limit > 0 && $plan_value > 0)
+                                        ? 'R$ ' . format_money($plan_value / max(1, $plan_limit)) . '/host'
+                                        : 'Valor sob consulta';
+                                ?>
+                                <label class="plan-option-card <?= $is_selected_plan ? 'plan-option-card--selected' : '' ?> <?= $is_recommended_plan ? 'plan-option-card--recommended' : '' ?>">
+                                    <input type="radio" name="plan_limit" value="<?= $plan_limit ?>" <?= $is_selected_plan ? 'checked' : '' ?>>
+                                    <div class="plan-option-card__header">
+                                        <span class="plan-option-card__name"><?= htmlspecialchars($plan_name) ?></span>
+                                        <?php if($is_recommended_plan): ?>
+                                            <span class="plan-option-card__badge">Recomendado</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <strong class="plan-option-card__value">R$ <?= format_money($plan_value) ?></strong>
+                                    <span class="plan-option-card__hosts"><?= $plan_limit > 0 ? "{$plan_limit} hosts" : 'Sem limite' ?></span>
+                                    <span class="plan-option-card__note"><?= $per_host_label ?></span>
+                                    <?php if($discount > 0): ?>
+                                        <span class="plan-option-card__discount">-<?= $discount ?>% desconto</span>
+                                    <?php endif; ?>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="plan-options-actions">
                             <button type="submit" class="billing-button">Salvar plano selecionado</button>
+                            <span class="plan-options-actions__help">Selecione um cartão e confirme para registrar.</span>
                         </div>
                         <?php if($display_over_hosts > 0): ?>
-                            <p class="billing-note">
+                            <p class="billing-note billing-actions__note">
                                 Hosts extras: <?= $display_over_hosts ?> cobrado<?= $display_over_hosts === 1 ? '' : 's' ?> a R$ <?= format_money($extra_host_rate) ?> cada.
                             </p>
                         <?php else: ?>
-                            <p class="billing-note billing-note--muted">
+                            <p class="billing-note billing-note--muted billing-actions__note">
                                 Sem hosts extras no momento.
                             </p>
                         <?php endif; ?>
@@ -614,6 +674,37 @@ $limit_overflow_percent = $plan_limit_display > 0 ? max(0, $limit_percent_raw - 
     })();
     </script>
 <?php endif; ?>
+
+<script>
+(function(){
+    const planRadios = document.querySelectorAll('.plan-option-card input[type="radio"]');
+    if(!planRadios.length) return;
+    const planCards = document.querySelectorAll('.plan-option-card');
+    const updateSelection = () => {
+        planCards.forEach(card => card.classList.remove('plan-option-card--selected'));
+        const checked = document.querySelector('.plan-option-card input[type="radio"]:checked');
+        if(checked){
+            const selectedCard = checked.closest('.plan-option-card');
+            if(selectedCard){
+                selectedCard.classList.add('plan-option-card--selected');
+            }
+        }
+    };
+    planRadios.forEach(radio => {
+        radio.addEventListener('change', updateSelection);
+    });
+    planCards.forEach(card => {
+        const radio = card.querySelector('input[type="radio"]');
+        if(!radio) return;
+        card.addEventListener('click', (event) => {
+            if(event.target === radio) return;
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    });
+    updateSelection();
+})();
+</script>
 
 <script>
 (function(){
