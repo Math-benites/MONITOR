@@ -1295,6 +1295,15 @@
     color: #0b5ed7;
 }
 
+.print-button--danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+.print-button--danger:hover {
+    background: #b02a37;
+}
+
 .billing-flash-wrapper {
     display: flex;
     flex-direction: column;

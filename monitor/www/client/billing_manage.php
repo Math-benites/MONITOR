@@ -273,6 +273,21 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
         }
         fclose($output);
         exit;
+    } elseif($action === 'delete_invoice'){
+        $delete_id = $_POST['record_id'] ?? '';
+        $before_count = count($invoice_history);
+        $invoice_history = array_values(array_filter($invoice_history, fn($entry) => ($entry['id'] ?? '') !== $delete_id));
+        if(count($invoice_history) < $before_count){
+            if(!is_dir(dirname($history_file_path))){
+                mkdir(dirname($history_file_path), 0755, true);
+            }
+            file_put_contents($history_file_path, json_encode($invoice_history, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+            add_toast('Boleto removido com sucesso.', 'success');
+        } else {
+            add_toast('Não foi possível localizar o boleto selecionado.', 'error');
+        }
+        $current_history = array_values(array_filter($invoice_history, fn($entry) => ($entry['server_account'] ?? '') === $server_code && ($entry['group_id'] ?? '') === $group_detail['usrgrpid']));
+        usort($current_history, fn($a,$b)=>strcmp($b['issued_at'] ?? '', $a['issued_at'] ?? ''));
     }
     header("Location: $redirect_url");
     exit;
@@ -463,6 +478,11 @@ $description_input_value = $prefill_state['description'] ?? "Cobrança referente
                                     </form>
                                     <a href="/client/invoice.php?server=<?= urlencode($server_name) ?>&group=<?= urlencode($group_id) ?>&history_id=<?= urlencode($entry['id']) ?>"
                                         class="print-button print-button--link">Boleto</a>
+                                    <form method="post" class="invoice-status-form" onsubmit="return confirm('Deseja realmente excluir este boleto?');">
+                                        <input type="hidden" name="action" value="delete_invoice">
+                                        <input type="hidden" name="record_id" value="<?= htmlspecialchars($entry['id']) ?>">
+                                        <button type="submit" class="print-button print-button--danger">Excluir</button>
+                                    </form>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
