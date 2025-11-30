@@ -36,6 +36,12 @@ while true; do
     else
         echo "${LOG_PREFIX} Erro ao executar a coleta."
     fi
+    echo "${LOG_PREFIX} Verificando emissão automática de boletos."
+    if php /var/www/scripts/auto_emit_invoices.php; then
+        echo "${LOG_PREFIX} Rotina de boletos executada."
+    else
+        echo "${LOG_PREFIX} Falha na rotina de boletos." >&2
+    fi
     echo "${LOG_PREFIX} Aguardando ${SLEEP_INTERVAL}s até a próxima coleta."
     sleep "$SLEEP_INTERVAL"
     SLEEP_INTERVAL=$(read_interval)
