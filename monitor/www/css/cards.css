@@ -1316,7 +1316,8 @@
 .plan-option-card input {
     position: absolute;
     opacity: 0;
-    pointer-events: none;
+    width: 1px;
+    height: 1px;
 }
 
 .plan-option-card__header {

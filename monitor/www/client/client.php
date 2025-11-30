@@ -677,6 +677,37 @@ if($recommended_plan_label && $history_peak_percent !== null && $history_peak_pe
 
 <script>
 (function(){
+    const planRadios = document.querySelectorAll('.plan-option-card input[type="radio"]');
+    if(!planRadios.length) return;
+    const planCards = document.querySelectorAll('.plan-option-card');
+    const updateSelection = () => {
+        planCards.forEach(card => card.classList.remove('plan-option-card--selected'));
+        const checked = document.querySelector('.plan-option-card input[type="radio"]:checked');
+        if(checked){
+            const selectedCard = checked.closest('.plan-option-card');
+            if(selectedCard){
+                selectedCard.classList.add('plan-option-card--selected');
+            }
+        }
+    };
+    planRadios.forEach(radio => {
+        radio.addEventListener('change', updateSelection);
+    });
+    planCards.forEach(card => {
+        const radio = card.querySelector('input[type="radio"]');
+        if(!radio) return;
+        card.addEventListener('click', (event) => {
+            if(event.target === radio) return;
+            radio.checked = true;
+            radio.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    });
+    updateSelection();
+})();
+</script>
+
+<script>
+(function(){
     const panel = document.getElementById('clientProfilePanel');
     const toggle = document.getElementById('toggleProfilePanel');
     const modal = document.getElementById('clientProfileModal');
