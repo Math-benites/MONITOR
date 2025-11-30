@@ -32,7 +32,18 @@ MONITOR/
 
 ## Configuração
 
-1. Crie `monitor/data/` com seus arquivos JSON. No mínimo, `settings.json` deve listar os servidores Zabbix, suas URLs e tokens (veja `www/functions.php` para o formato esperado).
+1. Crie `monitor/data/` com seus arquivos JSON. No mínimo, `settings.json` deve listar os servidores Zabbix, suas URLs e tokens (veja `www/functions.php` para o formato esperado). Você também pode definir o intervalo do coletor:
+   ```json
+   {
+     "collector": {
+       "interval_seconds": 43200
+     },
+     "servers": [
+       { "...": "..." }
+     ]
+   }
+   ```
+   Se `collector.interval_seconds` não for informado, o padrão permanece 43.200 segundos (12h).
 2. (Opcional) Popule `data/billing`, `data/history`, etc., com dados históricos existentes. O coletor atualizará automaticamente os arquivos em `data/history/hosts/*.json`.
 
 ## Subindo o projeto
@@ -43,7 +54,7 @@ docker compose up -d --build
 ```
 
 - A interface web fica disponível em `http://localhost:8080`.
-- O contêiner `php_history_collector` roda `scripts/collector-loop.sh`, que dispara `collect_host_history.php` a cada 12 horas (ajuste o `sleep` se precisar de outra periodicidade).
+- O contêiner `php_history_collector` roda `scripts/collector-loop.sh`, que dispara `collect_host_history.php` com a periodicidade definida em `settings.json` (ou 12 horas por padrão).
 
 ### Comandos úteis
 
@@ -56,8 +67,6 @@ docker compose up -d --build
 - Arquivos em `monitor/www` ficam montados em `/var/www/html`, então alterações locais são refletidas imediatamente.
 - Os scripts podem ser executados diretamente na máquina host usando `php monitor/scripts/collect_host_history.php`, desde que o `monitor/data` exista e contenha as credenciais corretas.
 
-## Boas práticas
+## Licença
 
-- Nunca commitar os arquivos reais de `monitor/data/`; eles frequentemente contêm tokens de API e dados sensíveis.
-- Automatize o backup de `monitor/data/` fora do repositório (por exemplo, usando `restic`, `rclone` ou snapshots do servidor).
-- Use variáveis de ambiente/secret managers se publicar o projeto em ambientes compartilhados.
+Este projeto é distribuído sob a licença MIT. Consulte o arquivo `LICENSE` para detalhes.
