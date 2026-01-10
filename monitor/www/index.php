@@ -25,6 +25,25 @@ $users_file = "$data_dir/user/user.json";
 $orgs_file = "$data_dir/user/org.json";
 $auth_email = $auth_user['username'] ?? '';
 
+function server_is_online($url) {
+    if (!$url) {
+        return false;
+    }
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 2);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_exec($ch);
+    $error = curl_errno($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($error) {
+        return false;
+    }
+    return $status > 0;
+}
+
 if (!file_exists($users_file) || !file_exists($orgs_file)) {
     $access_error = 'Arquivos de acesso nao encontrados.';
     $servers = [];
@@ -78,6 +97,11 @@ if (!file_exists($users_file) || !file_exists($orgs_file)) {
             }
         }
     }
+}
+
+$server_statuses = [];
+foreach ($servers as $srv) {
+    $server_statuses[$srv['name']] = server_is_online($srv['zabbix_url'] ?? '');
 }
 
 // ====== Seleciona servidor ======
@@ -155,39 +179,63 @@ if ($server_info) {
         <a href="/logout.php" class="topbar-logout">Logout</a>
     </div>
 
-<div class="central-menu-wrapper">
+<div class="access-shell" data-loading="true">
+    <section class="access-card">
+        <header class="access-card__header">
+            <h1>Servidores autorizados</h1>
+            <p>Selecione um servidor para visualizar os grupos disponiveis.</p>
+        </header>
 
-    <!-- Select servidor -->
-    <div class="card select-card">
-        <label for="server">Escolha o servidor:</label>
-        <select id="server" name="server" <?= empty($servers) ? 'disabled' : '' ?>>
-            <?php foreach ($servers as $srv): ?>
-                <option value="<?= htmlspecialchars($srv['name']) ?>"
-                    <?= $srv['name']===$server_name?'selected':'' ?>>
-                    <?= htmlspecialchars($srv['name']) ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-        <button id="accessServer" <?= empty($servers) ? 'disabled' : '' ?>>Atualizar</button>
-    </div>
+        <div class="access-skeleton" aria-hidden="true">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-row"></div>
+            <div class="skeleton-row"></div>
+            <div class="skeleton-row"></div>
+        </div>
 
-    <!-- Grupos e contador -->
-    <div class="groups-board">
         <?php if($api_error): ?>
             <div class="api-alert">
                 <strong>Sem conectividade</strong>
-                <p>Nao foi possivel carregar os dados do servidor <?= htmlspecialchars($server_info['name'] ?? 'N/A') ?>: <?= htmlspecialchars($api_error) ?>.</p>
+                <p><?= htmlspecialchars($api_error) ?></p>
             </div>
         <?php endif; ?>
-        <div class="groups-board-header">
-            <h2>Grupos de usuários</h2>
-            <p>Listagem dos grupos vinculados ao servidor selecionado.</p>
-        </div>
-        <div class="groups-grid">
+
+        <div class="access-layout">
+            <div class="server-list">
+                <?php if(!empty($servers)): ?>
+                    <?php foreach ($servers as $srv): ?>
+                        <?php $server_url = $srv['url_user'] ?? ''; ?>
+                        <?php $is_online = $server_statuses[$srv['name']] ?? false; ?>
+                        <div class="server-item <?= $srv['name']===$server_name?'server-item--active':'' ?>">
+                            <a class="server-item__link" href="/index.php?server=<?= urlencode($srv['name']) ?>">
+                                <div class="server-item__title">
+                                    <span class="server-status <?= $is_online ? 'server-status--online' : 'server-status--offline' ?>">
+                                        <?= $is_online ? 'Online' : 'Offline' ?>
+                                    </span>
+                                    <span><?= htmlspecialchars($srv['name']) ?></span>
+                                </div>
+                                <small><?= htmlspecialchars($srv['server_account'] ?? '') ?></small>
+                            </a>
+                            <?php if(!empty($server_url)): ?>
+                                <a class="server-item__action" href="<?= htmlspecialchars($server_url) ?>" target="_blank" rel="noopener">
+                                    Ir
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <p class="empty-state">Nenhum servidor autorizado.</p>
+                <?php endif; ?>
+            </div>
+
             <div class="group-list-panel">
+                <div class="group-list-panel__header">
+                    <h2>Grupos de usuarios</h2>
+                    <span>Mostrando os 10 primeiros</span>
+                </div>
                 <?php if(!empty($user_groups)): ?>
                     <ul class="group-list">
-                        <?php foreach($user_groups as $group): ?>
+                        <?php foreach(array_slice($user_groups, 0, 10) as $group): ?>
                             <?php $isInactive = ((int)($group['users_status'] ?? 0)) !== 0; ?>
                             <li class="group-item <?= $isInactive ? 'group-item--inactive' : '' ?>" data-groupid="<?= htmlspecialchars($group['usrgrpid']) ?>">
                                 <button type="button" class="group-link">
@@ -206,42 +254,20 @@ if ($server_info) {
                     <p class="empty-state">Nenhum grupo encontrado para este servidor.</p>
                 <?php endif; ?>
             </div>
-            <div class="group-sidebar-panel">
-                <div class="group-counter-panel">
-                    <span class="group-counter-label">Clientes</span>
-                    <strong><?= $groups_count ?></strong>
-                    <span class="group-counter-sub">Grupos ativos</span>
-                    <small><?= htmlspecialchars($server_info['name'] ?? 'N/A') ?></small>
-                </div>
-                <div class="group-info-card">
-                    <p class="info-card-title">Informações rápidas</p>
-                    <div class="info-card-row">
-                        <span>Server Day</span>
-                        <strong><?= htmlspecialchars($typeday) ?></strong>
-                    </div>
-                    <div class="info-card-row">
-                        <span>Total Hosts</span>
-                        <strong><?= $total_hosts_api ?></strong>
-                    </div>
-                    <div class="info-card-row">
-                        <span>Total Items</span>
-                        <strong><?= $total_items_api ?></strong>
-                    </div>
-                </div>
-            </div>
         </div>
-    </div>
+    </section>
 </div>
 
 <div class="canvas" id="canvas"></div>
 
 <script>
-document.getElementById('accessServer').addEventListener('click', () => {
-    const serverName = document.getElementById('server').value;
-    if(serverName){
-        window.location.href = `/index.php?server=${encodeURIComponent(serverName)}`;
+const accessShell = document.querySelector('.access-shell');
+window.addEventListener('load', () => {
+    if (accessShell) {
+        accessShell.removeAttribute('data-loading');
     }
 });
+
 const groupServer = <?= json_encode($server_name) ?>;
 document.querySelectorAll('.group-link').forEach(link => {
     link.addEventListener('click', () => {
