@@ -101,6 +101,22 @@ function google_email_allowed(array $config, $email) {
     return true;
 }
 
+function google_find_user_profile($email) {
+    if (!file_exists(GOOGLE_ALLOWED_USERS_FILE)) {
+        return null;
+    }
+    $data = json_decode(file_get_contents(GOOGLE_ALLOWED_USERS_FILE), true);
+    if (!is_array($data['users'] ?? null)) {
+        return null;
+    }
+    foreach ($data['users'] as $user) {
+        if (($user['email'] ?? '') === $email) {
+            return $user;
+        }
+    }
+    return null;
+}
+
 $errors = [];
 $return_to = $_POST['return'] ?? ($_GET['return'] ?? '/');
 $google_config = google_load_config();
@@ -126,10 +142,13 @@ if ($google_enabled && isset($_GET['code'])) {
             } elseif (!google_email_allowed($google_config, $userinfo['email'])) {
                 $errors[] = 'Seu e-mail não tem permissão para acessar.';
             } else {
+                $profile = google_find_user_profile($userinfo['email']);
                 $_SESSION['user'] = [
-                    'name' => $userinfo['name'] ?? $userinfo['email'],
+                    'name' => $profile['name'] ?? ($userinfo['name'] ?? $userinfo['email']),
                     'username' => $userinfo['email'],
-                    'role' => 'google'
+                    'role' => $profile['access']['group'] ?? 'google',
+                    'org_id' => $profile['org_id'] ?? null,
+                    'access' => $profile['access'] ?? null
                 ];
                 $return_to = $_SESSION['google_oauth_return'] ?? $return_to;
                 unset($_SESSION['google_oauth_state'], $_SESSION['google_oauth_return']);

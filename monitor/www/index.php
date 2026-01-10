@@ -21,6 +21,7 @@ $planos   = json_decode(file_get_contents($planos_file), true);
 // ====== Controle de acesso por usuario/org ======
 $access_error = null;
 $allowed_server_groups = [];
+$current_user = null;
 $users_file = "$data_dir/user/user.json";
 $orgs_file = "$data_dir/user/org.json";
 $auth_email = $auth_user['username'] ?? '';
@@ -53,7 +54,6 @@ if (!file_exists($users_file) || !file_exists($orgs_file)) {
     $users_list = $users_data['users'] ?? [];
     $orgs_list = $orgs_data['orgs'] ?? [];
 
-    $current_user = null;
     foreach ($users_list as $user) {
         if (($user['email'] ?? '') === $auth_email) {
             $current_user = $user;
@@ -65,35 +65,44 @@ if (!file_exists($users_file) || !file_exists($orgs_file)) {
         $access_error = 'Usuario sem permissao.';
         $servers = [];
     } else {
-        $org_id = $current_user['org_id'] ?? null;
-        $current_org = null;
-        foreach ($orgs_list as $org) {
-            if (($org['id'] ?? null) === $org_id) {
-                $current_org = $org;
-                break;
-            }
-        }
-
-        if (!$current_org) {
-            $access_error = 'Organizacao nao encontrada.';
-            $servers = [];
-        } else {
-            foreach ($current_org['servers'] ?? [] as $org_server) {
-                $server_id = $org_server['server_id'] ?? null;
-                if (!$server_id) {
-                    continue;
+        $user_rule = $current_user['access']['rule'] ?? '';
+        if ($user_rule === 'dev') {
+            foreach ($servers as $srv) {
+                if (!empty($srv['server_account'])) {
+                    $allowed_server_groups[$srv['server_account']] = [];
                 }
-                $allowed_server_groups[$server_id] = array_map(
-                    'intval',
-                    $org_server['groups'] ?? []
-                );
             }
-            $servers = array_values(array_filter(
-                $servers,
-                fn($srv) => isset($allowed_server_groups[$srv['server_account'] ?? ''])
-            ));
-            if (!$servers) {
-                $access_error = 'Nenhum servidor autorizado.';
+        } else {
+            $org_id = $current_user['org_id'] ?? null;
+            $current_org = null;
+            foreach ($orgs_list as $org) {
+                if (($org['id'] ?? null) === $org_id) {
+                    $current_org = $org;
+                    break;
+                }
+            }
+
+            if (!$current_org) {
+                $access_error = 'Organizacao nao encontrada.';
+                $servers = [];
+            } else {
+                foreach ($current_org['servers'] ?? [] as $org_server) {
+                    $server_id = $org_server['server_id'] ?? null;
+                    if (!$server_id) {
+                        continue;
+                    }
+                    $allowed_server_groups[$server_id] = array_map(
+                        'intval',
+                        $org_server['groups'] ?? []
+                    );
+                }
+                $servers = array_values(array_filter(
+                    $servers,
+                    fn($srv) => isset($allowed_server_groups[$srv['server_account'] ?? ''])
+                ));
+                if (!$servers) {
+                    $access_error = 'Nenhum servidor autorizado.';
+                }
             }
         }
     }
@@ -103,6 +112,9 @@ $server_statuses = [];
 foreach ($servers as $srv) {
     $server_statuses[$srv['name']] = server_is_online($srv['zabbix_url'] ?? '');
 }
+
+$user_rule = $current_user['access']['rule'] ?? '';
+$can_access_client = in_array($user_rule, ['read_write', 'full', 'dev'], true);
 
 // ====== Seleciona servidor ======
 $server_name = $_GET['server'] ?? ($servers[0]['name'] ?? null);
@@ -122,6 +134,7 @@ if(!$server_info && $servers){
 $server_account = $server_info['server_account'] ?? null;
 $typeday = $server_info['typeday'] ?? 'N/A';
 $allowed_group_ids = $server_account ? ($allowed_server_groups[$server_account] ?? []) : [];
+$allow_all_groups = $server_account && array_key_exists($server_account, $allowed_server_groups) && $allowed_group_ids === [];
 
 $ignore_groups = array_map('intval', $server_info['groupuser_ignore'] ?? []);
 $api_error = null;
@@ -231,7 +244,7 @@ if ($server_info) {
         $user_groups = array_values(array_filter(
             $user_groups_raw,
             fn($group) => !in_array((int)($group['usrgrpid'] ?? 0), $ignore_groups, true)
-                && in_array((int)($group['usrgrpid'] ?? 0), $allowed_group_ids, true)
+                && ($allow_all_groups || in_array((int)($group['usrgrpid'] ?? 0), $allowed_group_ids, true))
         ));
         $groups_count = count($user_groups);
         update_client_profiles($client_profiles_file, $server_account, $server_name, $user_groups);
@@ -359,7 +372,7 @@ if ($api_error && $server_account && file_exists($client_profiles_file)) {
                         <?php foreach(array_slice($user_groups, 0, 10) as $group): ?>
                             <?php $isInactive = ((int)($group['users_status'] ?? 0)) !== 0; ?>
                             <li class="group-item <?= $isInactive ? 'group-item--inactive' : '' ?>" data-groupid="<?= htmlspecialchars($group['usrgrpid']) ?>">
-                                <button type="button" class="group-link">
+                                <button type="button" class="group-link <?= !$can_access_client ? 'group-link--disabled' : '' ?>" <?= !$can_access_client ? 'disabled' : '' ?>>
                                     <div class="group-link__info">
                                         <span class="group-name"><?= htmlspecialchars($group['name']) ?></span>
                                         <?php if($isInactive): ?>
@@ -390,17 +403,20 @@ window.addEventListener('load', () => {
 });
 
 const groupServer = <?= json_encode($server_name) ?>;
-document.querySelectorAll('.group-link').forEach(link => {
-    link.addEventListener('click', () => {
-        const item = link.closest('.group-item');
-        const groupId = item?.dataset.groupid;
-        if(!groupId) return;
-        const url = new URL('/client/client.php', window.location.origin);
-        url.searchParams.set('server', groupServer);
-        url.searchParams.set('group', groupId);
-        window.location.href = url.toString();
+const canAccessClient = <?= json_encode($can_access_client) ?>;
+if (canAccessClient) {
+    document.querySelectorAll('.group-link').forEach(link => {
+        link.addEventListener('click', () => {
+            const item = link.closest('.group-item');
+            const groupId = item?.dataset.groupid;
+            if(!groupId) return;
+            const url = new URL('/client/client.php', window.location.origin);
+            url.searchParams.set('server', groupServer);
+            url.searchParams.set('group', groupId);
+            window.location.href = url.toString();
+        });
     });
-});
+}
 </script>
 
 

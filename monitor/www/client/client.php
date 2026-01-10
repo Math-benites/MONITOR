@@ -2,6 +2,7 @@
 include __DIR__ . '/../auth.php';
 include __DIR__ . '/../functions.php';
 auth_require_login();
+$auth_user = auth_current_user();
 global $data_dir;
 
 function format_money($value) {
@@ -30,6 +31,24 @@ if(!$server_info) die("Servidor '{$server_name}' não encontrado.");
 
 $group_id = $_GET['group'] ?? null;
 if(!$group_id) die("Grupo de usuários não especificado.");
+
+$data_root = (isset($data_dir) && $data_dir ? $data_dir : (__DIR__ . '/../../data'));
+$user_access_file = "{$data_root}/user/user.json";
+$current_user_rule = '';
+if (file_exists($user_access_file)) {
+    $user_access_data = json_decode(file_get_contents($user_access_file), true) ?? [];
+    foreach (($user_access_data['users'] ?? []) as $user) {
+        if (($user['email'] ?? '') === ($auth_user['username'] ?? '')) {
+            $current_user_rule = $user['access']['rule'] ?? '';
+            break;
+        }
+    }
+}
+if ($current_user_rule === '') {
+    die('Acesso negado para este perfil.');
+}
+$can_edit_client = in_array($current_user_rule, ['read_write', 'full', 'dev'], true);
+$can_edit_notes = in_array($current_user_rule, ['full', 'dev'], true);
 
 $group_detail = get_usergroup_detail($server_name, $group_id);
 if(!$group_detail) die("Grupo de usuários não encontrado.");
@@ -87,7 +106,6 @@ if(file_exists($history_file)){
     usort($history_entries, fn($a, $b) => intval($a['timestamp']) <=> intval($b['timestamp']));
 }
 
-$data_root = (isset($data_dir) && $data_dir ? $data_dir : (__DIR__ . '/../../data'));
 $extra_host_rate = 9.5;
 $planos_file = "{$data_root}/planos.json";
 $planos_data = [];
@@ -135,6 +153,9 @@ if(($client_profile['billing_cycle_start_day'] ?? '') === ''){
 }
 
 if($_SERVER['REQUEST_METHOD'] === 'POST'){
+    if(!$can_edit_client){
+        die('Acesso negado para este perfil.');
+    }
     $action = $_POST['action'] ?? '';
     if($action === 'save_profile'){
         foreach($client_profile_fields as $field){
@@ -283,7 +304,9 @@ if($recommended_plan_label && $history_peak_percent !== null && $history_peak_pe
             <h2><?= htmlspecialchars($group_detail['name']) ?></h2>
                 <div class="hero-actions">
                     <button type="button" class="hero-action hero-profile-toggle" id="toggleProfilePanel">Detalhes do cliente</button>
-                    <a href="<?= $invoice_url ?>" target="_blank" rel="noopener" class="hero-action hero-profile-toggle hero-pdf-toggle">PDF</a>
+                    <?php if($current_user_rule === 'dev'): ?>
+                        <a href="<?= $invoice_url ?>" target="_blank" rel="noopener" class="hero-action hero-profile-toggle hero-pdf-toggle">PDF</a>
+                    <?php endif; ?>
                     <a href="/client/billing_manage.php?server=<?= urlencode($server_name) ?>&group=<?= urlencode($group_id) ?>"
                         class="hero-action hero-profile-toggle hero-pdf-toggle hero-meg-faturar">Gestão cobrança</a>
                 </div>
@@ -324,7 +347,11 @@ if($recommended_plan_label && $history_peak_percent !== null && $history_peak_pe
             <?= profile_field_display($client_profile['notes']) ?>
         </div>
         <div class="client-profile-footer">
-            <button type="button" class="profile-edit-button" id="openProfileModal">Editar dados</button>
+            <?php if($can_edit_client): ?>
+                <button type="button" class="profile-edit-button" id="openProfileModal">Editar dados</button>
+            <?php else: ?>
+                <button type="button" class="profile-edit-button" disabled>Sem permissão</button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -421,7 +448,7 @@ if($recommended_plan_label && $history_peak_percent !== null && $history_peak_pe
                                         : 'Valor sob consulta';
                                 ?>
                                 <label class="plan-option-card <?= $is_selected_plan ? 'plan-option-card--selected' : '' ?> <?= $is_recommended_plan ? 'plan-option-card--recommended' : '' ?>">
-                                    <input type="radio" name="plan_limit" value="<?= $plan_limit ?>" <?= $is_selected_plan ? 'checked' : '' ?>>
+                                    <input type="radio" name="plan_limit" value="<?= $plan_limit ?>" <?= $is_selected_plan ? 'checked' : '' ?> <?= $can_edit_client ? '' : 'disabled' ?>>
                                     <div class="plan-option-card__header">
                                         <span class="plan-option-card__name"><?= htmlspecialchars($plan_name) ?></span>
                                         <?php if($is_recommended_plan): ?>
@@ -438,8 +465,14 @@ if($recommended_plan_label && $history_peak_percent !== null && $history_peak_pe
                             <?php endforeach; ?>
                         </div>
                         <div class="plan-options-actions">
-                            <button type="submit" class="billing-button">Salvar plano selecionado</button>
-                            <span class="plan-options-actions__help">Selecione um cartão e confirme para registrar.</span>
+                            <button type="submit" class="billing-button" <?= $can_edit_client ? '' : 'disabled' ?>>
+                                <?= $can_edit_client ? 'Salvar plano selecionado' : 'Sem permissão' ?>
+                            </button>
+                            <?php if($can_edit_client): ?>
+                                <span class="plan-options-actions__help">Selecione um cartão e confirme para registrar.</span>
+                            <?php else: ?>
+                                <span class="plan-options-actions__help plan-options-actions__help--disabled">Sem permissão para editar este plano.</span>
+                            <?php endif; ?>
                         </div>
                         <?php if($display_over_hosts > 0): ?>
                             <p class="billing-note billing-actions__note">
@@ -588,38 +621,38 @@ if($recommended_plan_label && $history_peak_percent !== null && $history_peak_pe
             <input type="hidden" name="action" value="save_profile">
             <label>
                 <span>Razão social</span>
-                <input type="text" name="company" value="<?= htmlspecialchars($client_profile['company']) ?>">
+                <input type="text" name="company" value="<?= htmlspecialchars($client_profile['company']) ?>" <?= $can_edit_client ? '' : 'disabled' ?>>
             </label>
             <label>
                 <span>CNPJ</span>
-                <input type="text" name="cnpj" value="<?= htmlspecialchars($client_profile['cnpj']) ?>">
+                <input type="text" name="cnpj" value="<?= htmlspecialchars($client_profile['cnpj']) ?>" <?= $can_edit_client ? '' : 'disabled' ?>>
             </label>
             <label>
                 <span>Telefone</span>
-                <input type="text" name="phone" value="<?= htmlspecialchars($client_profile['phone']) ?>">
+                <input type="text" name="phone" value="<?= htmlspecialchars($client_profile['phone']) ?>" <?= $can_edit_client ? '' : 'disabled' ?>>
             </label>
             <label>
                 <span>Email</span>
-                <input type="email" name="email" value="<?= htmlspecialchars($client_profile['email']) ?>">
+                <input type="email" name="email" value="<?= htmlspecialchars($client_profile['email']) ?>" <?= $can_edit_client ? '' : 'disabled' ?>>
             </label>
             <label>
                 <span>Responsável</span>
-                <input type="text" name="responsavel" value="<?= htmlspecialchars($client_profile['responsavel']) ?>">
+                <input type="text" name="responsavel" value="<?= htmlspecialchars($client_profile['responsavel']) ?>" <?= $can_edit_client ? '' : 'disabled' ?>>
             </label>
             <label>
                 <span>Endereço</span>
-                <input type="text" name="address" value="<?= htmlspecialchars($client_profile['address']) ?>">
+                <input type="text" name="address" value="<?= htmlspecialchars($client_profile['address']) ?>" <?= $can_edit_client ? '' : 'disabled' ?>>
             </label>
             <label>
                 <span>Dia do ciclo de cobrança</span>
                 <input type="number" name="billing_cycle_start_day" min="1" max="31"
-                    value="<?= htmlspecialchars($client_profile['billing_cycle_start_day']) ?>">
+                    value="<?= htmlspecialchars($client_profile['billing_cycle_start_day']) ?>" <?= $can_edit_client ? '' : 'disabled' ?>>
             </label>
             <label>
                 <span>Notas (opcional)</span>
-                <textarea name="notes"><?= htmlspecialchars($client_profile['notes']) ?></textarea>
+                <textarea name="notes" <?= $can_edit_notes ? '' : 'disabled' ?>><?= htmlspecialchars($client_profile['notes']) ?></textarea>
             </label>
-            <button type="submit" class="modal-submit">Salvar alterações</button>
+            <button type="submit" class="modal-submit" <?= $can_edit_client ? '' : 'disabled' ?>>Salvar alterações</button>
         </form>
     </div>
 </div>
