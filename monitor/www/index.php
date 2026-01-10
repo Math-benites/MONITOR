@@ -18,8 +18,70 @@ $settings = json_decode(file_get_contents($settings_file), true);
 $servers  = $settings['servers'] ?? [];
 $planos   = json_decode(file_get_contents($planos_file), true);
 
+// ====== Controle de acesso por usuario/org ======
+$access_error = null;
+$allowed_server_groups = [];
+$users_file = "$data_dir/user/user.json";
+$orgs_file = "$data_dir/user/org.json";
+$auth_email = $auth_user['username'] ?? '';
+
+if (!file_exists($users_file) || !file_exists($orgs_file)) {
+    $access_error = 'Arquivos de acesso nao encontrados.';
+    $servers = [];
+} else {
+    $users_data = json_decode(file_get_contents($users_file), true);
+    $orgs_data = json_decode(file_get_contents($orgs_file), true);
+    $users_list = $users_data['users'] ?? [];
+    $orgs_list = $orgs_data['orgs'] ?? [];
+
+    $current_user = null;
+    foreach ($users_list as $user) {
+        if (($user['email'] ?? '') === $auth_email) {
+            $current_user = $user;
+            break;
+        }
+    }
+
+    if (!$current_user) {
+        $access_error = 'Usuario sem permissao.';
+        $servers = [];
+    } else {
+        $org_id = $current_user['org_id'] ?? null;
+        $current_org = null;
+        foreach ($orgs_list as $org) {
+            if (($org['id'] ?? null) === $org_id) {
+                $current_org = $org;
+                break;
+            }
+        }
+
+        if (!$current_org) {
+            $access_error = 'Organizacao nao encontrada.';
+            $servers = [];
+        } else {
+            foreach ($current_org['servers'] ?? [] as $org_server) {
+                $server_id = $org_server['server_id'] ?? null;
+                if (!$server_id) {
+                    continue;
+                }
+                $allowed_server_groups[$server_id] = array_map(
+                    'intval',
+                    $org_server['groups'] ?? []
+                );
+            }
+            $servers = array_values(array_filter(
+                $servers,
+                fn($srv) => isset($allowed_server_groups[$srv['server_account'] ?? ''])
+            ));
+            if (!$servers) {
+                $access_error = 'Nenhum servidor autorizado.';
+            }
+        }
+    }
+}
+
 // ====== Seleciona servidor ======
-$server_name = $_GET['server'] ?? $servers[0]['name'] ?? null;
+$server_name = $_GET['server'] ?? ($servers[0]['name'] ?? null);
 $server_info = null;
 foreach($servers as $srv){
     if($srv['name'] === $server_name){
@@ -27,11 +89,15 @@ foreach($servers as $srv){
         break;
     }
 }
-if(!$server_info) die("Servidor '$server_name' não encontrado.");
+if(!$server_info && $servers){
+    $server_info = $servers[0];
+    $server_name = $server_info['name'];
+}
 
 // ====== Filtra grupos deste servidor ======
-$server_account = $server_info['server_account'];
+$server_account = $server_info['server_account'] ?? null;
 $typeday = $server_info['typeday'] ?? 'N/A';
+$allowed_group_ids = $server_account ? ($allowed_server_groups[$server_account] ?? []) : [];
 
 $ignore_groups = array_map('intval', $server_info['groupuser_ignore'] ?? []);
 $api_error = null;
@@ -41,25 +107,30 @@ $hosts_from_api = [];
 $total_hosts_api = 0;
 $total_items_api = 0;
 
-try {
-    $user_groups_raw = list_usergroups($server_name);
-    $user_groups = array_values(array_filter(
-        $user_groups_raw,
-        fn($group) => !in_array((int)($group['usrgrpid'] ?? 0), $ignore_groups, true)
-    ));
-    $groups_count = count($user_groups);
+if ($server_info) {
+    try {
+        $user_groups_raw = list_usergroups($server_name);
+        $user_groups = array_values(array_filter(
+            $user_groups_raw,
+            fn($group) => !in_array((int)($group['usrgrpid'] ?? 0), $ignore_groups, true)
+                && in_array((int)($group['usrgrpid'] ?? 0), $allowed_group_ids, true)
+        ));
+        $groups_count = count($user_groups);
 
-    $hosts_from_api = get_hosts($server_name);
-    $total_hosts_api = count($hosts_from_api);
-    $host_ids = array_filter(array_map(fn($host) => $host['hostid'] ?? null, $hosts_from_api));
-    $total_items_api = $host_ids ? count_items($server_name, $host_ids) : 0;
-} catch (Exception $ex) {
-    $api_error = $ex->getMessage();
-    $user_groups = [];
-    $groups_count = 0;
-    $hosts_from_api = [];
-    $total_hosts_api = 0;
-    $total_items_api = 0;
+        $hosts_from_api = get_hosts($server_name);
+        $total_hosts_api = count($hosts_from_api);
+        $host_ids = array_filter(array_map(fn($host) => $host['hostid'] ?? null, $hosts_from_api));
+        $total_items_api = $host_ids ? count_items($server_name, $host_ids) : 0;
+    } catch (Exception $ex) {
+        $api_error = $ex->getMessage();
+        $user_groups = [];
+        $groups_count = 0;
+        $hosts_from_api = [];
+        $total_hosts_api = 0;
+        $total_items_api = 0;
+    }
+} else {
+    $api_error = $access_error ?: 'Servidor nao autorizado.';
 }
 ?>
 <!DOCTYPE html>
@@ -89,7 +160,7 @@ try {
     <!-- Select servidor -->
     <div class="card select-card">
         <label for="server">Escolha o servidor:</label>
-        <select id="server" name="server">
+        <select id="server" name="server" <?= empty($servers) ? 'disabled' : '' ?>>
             <?php foreach ($servers as $srv): ?>
                 <option value="<?= htmlspecialchars($srv['name']) ?>"
                     <?= $srv['name']===$server_name?'selected':'' ?>>
@@ -97,7 +168,7 @@ try {
                 </option>
             <?php endforeach; ?>
         </select>
-        <button id="accessServer">Atualizar</button>
+        <button id="accessServer" <?= empty($servers) ? 'disabled' : '' ?>>Atualizar</button>
     </div>
 
     <!-- Grupos e contador -->
@@ -105,7 +176,7 @@ try {
         <?php if($api_error): ?>
             <div class="api-alert">
                 <strong>Sem conectividade</strong>
-                <p>Nao foi possivel carregar os dados do servidor <?= htmlspecialchars($server_info['name']) ?>: <?= htmlspecialchars($api_error) ?>. Tente novamente mais tarde.</p>
+                <p>Nao foi possivel carregar os dados do servidor <?= htmlspecialchars($server_info['name'] ?? 'N/A') ?>: <?= htmlspecialchars($api_error) ?>.</p>
             </div>
         <?php endif; ?>
         <div class="groups-board-header">
@@ -140,7 +211,7 @@ try {
                     <span class="group-counter-label">Clientes</span>
                     <strong><?= $groups_count ?></strong>
                     <span class="group-counter-sub">Grupos ativos</span>
-                    <small><?= htmlspecialchars($server_info['name']) ?></small>
+                    <small><?= htmlspecialchars($server_info['name'] ?? 'N/A') ?></small>
                 </div>
                 <div class="group-info-card">
                     <p class="info-card-title">Informações rápidas</p>

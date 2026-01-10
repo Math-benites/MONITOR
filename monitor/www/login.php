@@ -2,7 +2,7 @@
 require_once __DIR__ . '/auth.php';
 
 define('GOOGLE_CONFIG_FILE', '/data/google.json');
-define('GOOGLE_ALLOWED_USERS_FILE', __DIR__ . '/../data/user/user.json');
+define('GOOGLE_ALLOWED_USERS_FILE', '/data/user/user.json');
 
 function google_load_config() {
     if (!file_exists(GOOGLE_CONFIG_FILE)) {
@@ -78,9 +78,18 @@ function google_email_allowed(array $config, $email) {
     }
     if (file_exists(GOOGLE_ALLOWED_USERS_FILE)) {
         $allowed_users = json_decode(file_get_contents(GOOGLE_ALLOWED_USERS_FILE), true);
-        if (is_array($allowed_users) && !empty($allowed_users)) {
+        if (is_array($allowed_users)) {
+            if (isset($allowed_users['users']) && is_array($allowed_users['users'])) {
+                foreach ($allowed_users['users'] as $user) {
+                    if (($user['email'] ?? '') === $email) {
+                        return true;
+                    }
+                }
+                return false;
+            }
             return in_array($email, $allowed_users, true);
         }
+        return false;
     }
     if (!empty($config['allowed_emails']) && is_array($config['allowed_emails'])) {
         return in_array($email, $config['allowed_emails'], true);
