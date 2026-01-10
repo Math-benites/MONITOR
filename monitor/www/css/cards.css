@@ -424,21 +424,29 @@
     justify-content: space-between;
 }
 
+.topbar-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
 .topbar-logout {
     text-decoration: none;
     padding: 8px 14px;
     border-radius: 999px;
-    background: #0d6efd;
+    background: #111827;
     color: #fff;
     font-weight: 600;
-    box-shadow: 0 8px 20px rgba(13,110,253,0.25);
+    box-shadow: 0 8px 20px rgba(17, 24, 39, 0.25);
     transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .topbar-logout:hover,
 .topbar-logout:focus-visible {
-    background: #0b5ed7;
-    box-shadow: 0 10px 24px rgba(13,110,253,0.3);
+    background: #0f172a;
+    box-shadow: 0 10px 24px rgba(17, 24, 39, 0.35);
     transform: translateY(-1px);
 }
 
@@ -2013,23 +2021,64 @@
 
 .access-card {
     width: min(1080px, 96vw);
-    background: rgba(255, 255, 255, 0.92);
+    background: #111827;
     border-radius: 24px;
     padding: 32px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    box-shadow: 0 24px 50px rgba(15, 23, 42, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 24px 50px rgba(15, 23, 42, 0.35);
     position: relative;
     overflow: hidden;
+    color: #f9fafb;
 }
 
 .access-card__header h1 {
     margin: 0 0 6px;
     font-size: 1.9rem;
+    color: #f9fafb;
 }
 
 .access-card__header p {
     margin: 0 0 22px;
-    color: rgba(17, 24, 39, 0.7);
+    color: rgba(248, 250, 251, 0.7);
+}
+
+.access-card .server-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.access-card .server-item__link small {
+    color: rgba(248, 250, 251, 0.65);
+}
+
+.access-card .server-item__action {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.access-card .group-link {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.access-card .group-link:hover,
+.access-card .group-link:focus-visible {
+    background: rgba(59, 130, 246, 0.16);
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+.access-card .group-item--inactive .group-link {
+    background: rgba(239, 68, 68, 0.16);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #fecaca;
+}
+
+.access-card .group-name,
+.access-card .group-id {
+    color: rgba(248, 250, 251, 0.85);
+}
+
+.access-card .empty-state {
+    color: rgba(248, 250, 251, 0.65);
 }
 
 .access-zabbix-btn {
@@ -2133,6 +2182,17 @@
 .server-item--active .server-item__action {
     background: rgba(255, 255, 255, 0.16);
     color: #fff;
+}
+
+.access-card .server-item:hover,
+.access-card .server-item:focus-within {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.45);
+}
+
+.access-card .server-item:hover .server-item__action,
+.access-card .server-item:focus-within .server-item__action {
+    background: rgba(59, 130, 246, 0.35);
 }
 
 .group-list-panel__header {

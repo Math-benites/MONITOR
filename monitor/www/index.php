@@ -130,6 +130,100 @@ $groups_count = 0;
 $hosts_from_api = [];
 $total_hosts_api = 0;
 $total_items_api = 0;
+$client_profiles = [];
+$client_profiles_file = "$data_dir/client_profiles.json";
+
+function update_client_profiles($file, $server_account, $server_name, array $user_groups) {
+    if (!$server_account) {
+        return;
+    }
+    $profiles = [];
+    if (file_exists($file)) {
+        $profiles = json_decode(file_get_contents($file), true);
+        if (!is_array($profiles)) {
+            $profiles = [];
+        }
+    }
+    $updated = false;
+    foreach ($user_groups as $group) {
+        $group_id = isset($group['usrgrpid']) ? (int) $group['usrgrpid'] : 0;
+        if (!$group_id) {
+            continue;
+        }
+        $key = $server_account . '_' . $group_id;
+        $name = $group['name'] ?? '';
+        if (!isset($profiles[$key]) || !is_array($profiles[$key])) {
+            $profiles[$key] = [];
+            $updated = true;
+        }
+        if (($profiles[$key]['group_id'] ?? null) !== $group_id) {
+            $profiles[$key]['group_id'] = $group_id;
+            $updated = true;
+        }
+        if ($name && ($profiles[$key]['name'] ?? '') !== $name) {
+            $profiles[$key]['name'] = $name;
+            $updated = true;
+        }
+    }
+    if ($server_name) {
+        try {
+            $hostgroups = get_hostgroups($server_name);
+            $hostgroups_indexed = [];
+            foreach ($hostgroups as $hg) {
+                $hostgroups_indexed[$hg['groupid']] = [
+                    'name' => $hg['name'],
+                    'hosts_count' => (int) ($hg['hosts'] ?? 0)
+                ];
+            }
+
+            foreach ($user_groups as $group) {
+                $group_id = isset($group['usrgrpid']) ? (int) $group['usrgrpid'] : 0;
+                if (!$group_id) {
+                    continue;
+                }
+                $detail = get_usergroup_detail($server_name, $group_id);
+                if (!$detail) {
+                    continue;
+                }
+                $rights = [];
+                $total_hosts = 0;
+                foreach ($detail['hostgroup_rights'] ?? [] as $right) {
+                    $hg_id = $right['id'] ?? $right['hostgroupid'] ?? null;
+                    if (!$hg_id) {
+                        continue;
+                    }
+                    $permission = [0 => "Nenhum", 2 => "Leitura", 3 => "Leitura-Escrita"][$right['permission']] ?? $right['permission'];
+                    $hosts_count = (int) ($hostgroups_indexed[$hg_id]['hosts_count'] ?? 0);
+                    $rights[] = [
+                        'id' => (string) $hg_id,
+                        'name' => $hostgroups_indexed[$hg_id]['name'] ?? ($right['name'] ?? 'Desconhecido'),
+                        'permission' => $permission,
+                        'hosts_count' => $hosts_count
+                    ];
+                    $total_hosts += $hosts_count;
+                }
+                $key = $server_account . '_' . $group_id;
+                if (!isset($profiles[$key]) || !is_array($profiles[$key])) {
+                    $profiles[$key] = [];
+                }
+                $profiles[$key]['last_snapshot'] = [
+                    'captured_at' => date('c'),
+                    'hostgroups' => $rights,
+                    'summary' => [
+                        'total_hostgroups' => count($rights),
+                        'total_hosts' => $total_hosts
+                    ]
+                ];
+                $updated = true;
+            }
+        } catch (Exception $ex) {
+        }
+    }
+
+    if ($updated) {
+        file_put_contents($file, json_encode($profiles, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+    }
+}
 
 if ($server_info) {
     try {
@@ -140,6 +234,7 @@ if ($server_info) {
                 && in_array((int)($group['usrgrpid'] ?? 0), $allowed_group_ids, true)
         ));
         $groups_count = count($user_groups);
+        update_client_profiles($client_profiles_file, $server_account, $server_name, $user_groups);
 
         $hosts_from_api = get_hosts($server_name);
         $total_hosts_api = count($hosts_from_api);
@@ -155,6 +250,35 @@ if ($server_info) {
     }
 } else {
     $api_error = $access_error ?: 'Servidor nao autorizado.';
+}
+
+if ($api_error && $server_account && file_exists($client_profiles_file)) {
+    $client_profiles = json_decode(file_get_contents($client_profiles_file), true);
+    if (is_array($client_profiles)) {
+        $fallback_groups = [];
+        foreach ($client_profiles as $key => $profile) {
+            if (strpos($key, $server_account . '_') !== 0) {
+                continue;
+            }
+            $parts = explode('_', $key);
+            $group_id = isset($parts[1]) ? (int) $parts[1] : 0;
+            if (!$group_id || !in_array($group_id, $allowed_group_ids, true)) {
+                continue;
+            }
+            if (!empty($profile['group_id'])) {
+                $group_id = (int) $profile['group_id'];
+            }
+            $fallback_groups[] = [
+                'usrgrpid' => (string) $group_id,
+                'name' => $profile['name'] ?? $profile['company'] ?? ("Grupo " . $group_id),
+                'users_status' => 0
+            ];
+        }
+        if ($fallback_groups) {
+            $user_groups = $fallback_groups;
+            $groups_count = count($fallback_groups);
+        }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -176,14 +300,17 @@ if ($server_info) {
                 <span>InfraStack</span>
             </a>
         </div>
-        <a href="/logout.php" class="topbar-logout">Logout</a>
+        <div class="topbar-user">
+            <span><?= htmlspecialchars($auth_user['name'] ?? $auth_user['username'] ?? 'Usuario') ?></span>
+            <a href="/logout.php" class="topbar-logout">Logout</a>
+        </div>
     </div>
 
 <div class="access-shell" data-loading="true">
     <section class="access-card">
         <header class="access-card__header">
-            <h1>Servidores autorizados</h1>
-            <p>Selecione um servidor para visualizar os grupos disponiveis.</p>
+            <h1><?= htmlspecialchars($current_org['name'] ?? '') ?></h1>
+            <p>Servicos, clientes e produtos</p>
         </header>
 
         <div class="access-skeleton" aria-hidden="true">
@@ -193,12 +320,6 @@ if ($server_info) {
             <div class="skeleton-row"></div>
         </div>
 
-        <?php if($api_error): ?>
-            <div class="api-alert">
-                <strong>Sem conectividade</strong>
-                <p><?= htmlspecialchars($api_error) ?></p>
-            </div>
-        <?php endif; ?>
 
         <div class="access-layout">
             <div class="server-list">
@@ -230,7 +351,7 @@ if ($server_info) {
 
             <div class="group-list-panel">
                 <div class="group-list-panel__header">
-                    <h2>Grupos de usuarios</h2>
+                    <h2>Grupos de empresas</h2>
                     <span>Mostrando os 10 primeiros</span>
                 </div>
                 <?php if(!empty($user_groups)): ?>
