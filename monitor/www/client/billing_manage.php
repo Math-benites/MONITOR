@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../auth.php';
+auth_require_login();
 require_once __DIR__ . '/../functions.php';
 
 $server_name = $_GET['server'] ?? $servers[0]['name'] ?? null;

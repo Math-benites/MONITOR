@@ -1,5 +1,7 @@
 <?php
+include __DIR__ . '/../auth.php';
 include __DIR__ . '/../functions.php';
+auth_require_login();
 global $data_dir;
 
 function format_money($value) {

@@ -74,14 +74,11 @@ try {
 <link rel="stylesheet" href="/css/cards.css">
 </head>
 <body>
-    <div class="topbar-shell">
-        <div class="topbar-brand">
-            <a href="/">
-                <img src="/img/infrastack.svg" alt="InfraStack">
-                <span>InfraStack</span>
-            </a>
-        </div>
-        <a href="/logout.php" class="topbar-logout">Logout</a>
+    <div class="topbar-brand invoice-top-brand">
+        <a href="/">
+            <img src="/img/infrastack.svg" alt="InfraStack">
+            <span>InfraStack</span>
+        </a>
     </div>
 
 <div class="central-menu-wrapper">

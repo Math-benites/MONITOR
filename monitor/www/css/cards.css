@@ -415,6 +415,33 @@
     justify-content: flex-start;
 }
 
+.topbar-shell {
+    width: min(1100px, 96vw);
+    margin: 0 auto 16px;
+    padding: 6px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.topbar-logout {
+    text-decoration: none;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #0d6efd;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 8px 20px rgba(13,110,253,0.25);
+    transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.topbar-logout:hover,
+.topbar-logout:focus-visible {
+    background: #0b5ed7;
+    box-shadow: 0 10px 24px rgba(13,110,253,0.3);
+    transform: translateY(-1px);
+}
+
 .billing-page-shell {
     min-height: 100vh;
     padding: 40px 0 60px;
