@@ -169,10 +169,10 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 </head>
 <body class="login-body">
     <div class="login-shell">
-        <div class="login-hero">
-            <div class="login-brand">
-                <img class="login-brand__logo" src="/img/infrastack.svg" alt="InfraStack">
-                <div class="login-brand__text">
+            <div class="login-hero">
+                <div class="login-brand">
+                    <img class="login-brand__logo" src="/img/infrastack.svg" alt="InfraStack">
+                    <div class="login-brand__text">
                     <span class="login-brand__name">InfraStack</span>
                     <span class="login-brand__tag">Monitor</span>
                 </div>
