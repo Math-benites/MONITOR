@@ -299,13 +299,13 @@ if($recommended_plan_label && $history_peak_percent !== null && $history_peak_pe
     </div>
     <div class="client-hero-card">
         <span class="hero-label">Grupo selecionado</span>
-        <?php $invoice_url = "/client/invoice.php?server=" . urlencode($server_name) . "&group=" . urlencode($group_id); ?>
+        <?php $invoice_url = "/client/invoice.php?server=" . urlencode($server_name) . "&group=" . urlencode($group_id) . "&download=1"; ?>
         <div class="hero-title-row">
             <h2><?= htmlspecialchars($group_detail['name']) ?></h2>
                 <div class="hero-actions">
                     <button type="button" class="hero-action hero-profile-toggle" id="toggleProfilePanel">Detalhes do cliente</button>
                     <?php if($current_user_rule === 'dev'): ?>
-                        <a href="<?= $invoice_url ?>" target="_blank" rel="noopener" class="hero-action hero-profile-toggle hero-pdf-toggle">PDF</a>
+                        <a href="<?= $invoice_url ?>" class="hero-action hero-profile-toggle hero-pdf-toggle">PDF</a>
                     <?php endif; ?>
                     <a href="/client/billing_manage.php?server=<?= urlencode($server_name) ?>&group=<?= urlencode($group_id) ?>"
                         class="hero-action hero-profile-toggle hero-pdf-toggle hero-meg-faturar">Gestão cobrança</a>

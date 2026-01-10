@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../auth.php';
 auth_require_login();
 require_once __DIR__ . '/../functions.php';
+$auth_user = auth_current_user();
 
 $server_name = $_GET['server'] ?? $servers[0]['name'] ?? null;
 $server_info = get_server($server_name);
@@ -14,6 +15,18 @@ $group_detail = get_usergroup_detail($server_name, $group_id);
 if(!$group_detail) die("Grupo de usuários não encontrado.");
 
 $data_root = (isset($data_dir) && $data_dir ? $data_dir : (__DIR__ . '/../../data'));
+$user_access_file = "{$data_root}/user/user.json";
+$current_user_rule = '';
+if (file_exists($user_access_file)) {
+    $user_access_data = json_decode(file_get_contents($user_access_file), true) ?? [];
+    foreach (($user_access_data['users'] ?? []) as $user) {
+        if (($user['email'] ?? '') === ($auth_user['username'] ?? '')) {
+            $current_user_rule = $user['access']['rule'] ?? '';
+            break;
+        }
+    }
+}
+$can_edit_billing = in_array($current_user_rule, ['dev', 'full'], true);
 $planos_file = "{$data_root}/planos.json";
 $planos_data = [];
 if(file_exists($planos_file)){
@@ -151,6 +164,9 @@ if($search_query){
 $redirect_url = "/client/billing_manage.php?" . http_build_query($redirect_params);
 
 if($_SERVER['REQUEST_METHOD'] === 'POST'){
+    if(!$can_edit_billing){
+        die('Acesso negado para este perfil.');
+    }
     $action = $_POST['action'] ?? '';
     if($action === 'emit_invoice'){
         $due_date = trim($_POST['due_date'] ?? '');
@@ -336,37 +352,39 @@ $description_input_value = $prefill_state['description'] ?? "Cobrança referente
                 </div>
             </div>
         </header>
-        <section class="invoice-section">
-            <header class="section-header">
-                <h2>Emitir boleto</h2>
-            </header>
-            <form method="post" class="billing-form">
-                <input type="hidden" name="action" value="emit_invoice">
-                <div class="billing-grid">
-                    <div class="billing-grid-item">
-                        <label>
-                            <span>Valor (R$)</span>
-                            <input type="number" step="0.01" name="amount" value="<?= htmlspecialchars($amount_input_value) ?>" required>
-                        </label>
+        <?php if($can_edit_billing): ?>
+            <section class="invoice-section">
+                <header class="section-header">
+                    <h2>Emitir boleto</h2>
+                </header>
+                <form method="post" class="billing-form">
+                    <input type="hidden" name="action" value="emit_invoice">
+                    <div class="billing-grid">
+                        <div class="billing-grid-item">
+                            <label>
+                                <span>Valor (R$)</span>
+                                <input type="number" step="0.01" name="amount" value="<?= htmlspecialchars($amount_input_value) ?>" required>
+                            </label>
+                        </div>
+                        <div class="billing-grid-item">
+                            <label>
+                                <span>Data de vencimento</span>
+                                <input type="date" name="due_date" value="<?= htmlspecialchars($due_input_value) ?>">
+                            </label>
+                        </div>
+                        <div class="billing-grid-item">
+                            <label>
+                                <span>Descrição</span>
+                                <input type="text" name="description" value="<?= htmlspecialchars($description_input_value) ?>">
+                            </label>
+                        </div>
                     </div>
-                    <div class="billing-grid-item">
-                        <label>
-                            <span>Data de vencimento</span>
-                            <input type="date" name="due_date" value="<?= htmlspecialchars($due_input_value) ?>">
-                        </label>
+                    <div class="print-actions">
+                        <button type="submit" class="print-button">Emitir boleto</button>
                     </div>
-                    <div class="billing-grid-item">
-                        <label>
-                            <span>Descrição</span>
-                            <input type="text" name="description" value="<?= htmlspecialchars($description_input_value) ?>">
-                        </label>
-                    </div>
-                </div>
-                <div class="print-actions">
-                    <button type="submit" class="print-button">Emitir boleto</button>
-                </div>
-            </form>
-        </section>
+                </form>
+            </section>
+        <?php endif; ?>
         <section class="invoice-section">
             <header class="section-header">
                 <h2>Histórico de cobranças</h2>
@@ -397,13 +415,6 @@ $description_input_value = $prefill_state['description'] ?? "Cobrança referente
                 </div>
             </form>
             <div class="billing-filter-actions">
-                <form method="post" class="billing-inline-form">
-                    <input type="hidden" name="action" value="mark_all_paid">
-                    <input type="hidden" name="status_filter" value="<?= htmlspecialchars($status_filter) ?>">
-                    <input type="hidden" name="month_filter" value="<?= htmlspecialchars($month_filter) ?>">
-                    <input type="hidden" name="search_query" value="<?= htmlspecialchars($search_query) ?>">
-                    <button type="submit" class="print-button print-button--secondary">Marcar exibidos como pagos</button>
-                </form>
                 <form method="post" class="billing-inline-form">
                     <input type="hidden" name="action" value="export_csv">
                     <input type="hidden" name="status_filter" value="<?= htmlspecialchars($status_filter) ?>">
@@ -461,30 +472,29 @@ $description_input_value = $prefill_state['description'] ?? "Cobrança referente
                                 <td><span class="invoice-status-badge <?= $status_class ?>"><?= htmlspecialchars($entry_status) ?></span></td>
                                 <td><?= $overdue_days ?></td>
                                 <td class="invoice-table-actions">
-                                    <form method="post" class="invoice-status-form">
-                                        <input type="hidden" name="action" value="update_status">
-                                        <input type="hidden" name="record_id" value="<?= htmlspecialchars($entry['id']) ?>">
-                                        <select name="status">
-                                            <?php foreach(['Pendente','Pago','Cancelado'] as $statusOption): ?>
-                                                <option value="<?= $statusOption ?>" <?= $statusOption === ($entry['status'] ?? '') ? 'selected' : '' ?>>
-                                                    <?= $statusOption ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        </select>
-                                        <button type="submit" class="print-button">Atualizar</button>
-                                    </form>
-                                    <form method="post" class="invoice-status-form">
-                                        <input type="hidden" name="action" value="duplicate_invoice">
-                                        <input type="hidden" name="record_id" value="<?= htmlspecialchars($entry['id']) ?>">
-                                        <button type="submit" class="print-button">Duplicar</button>
-                                    </form>
-                                    <a href="/client/invoice.php?server=<?= urlencode($server_name) ?>&group=<?= urlencode($group_id) ?>&history_id=<?= urlencode($entry['id']) ?>"
+                                    <?php if($can_edit_billing): ?>
+                                        <form method="post" class="invoice-status-form">
+                                            <input type="hidden" name="action" value="update_status">
+                                            <input type="hidden" name="record_id" value="<?= htmlspecialchars($entry['id']) ?>">
+                                            <select name="status">
+                                                <?php foreach(['Pendente','Pago','Cancelado'] as $statusOption): ?>
+                                                    <option value="<?= $statusOption ?>" <?= $statusOption === ($entry['status'] ?? '') ? 'selected' : '' ?>>
+                                                        <?= $statusOption ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <button type="submit" class="print-button">Atualizar</button>
+                                        </form>
+                                    <?php endif; ?>
+                                    <a href="/client/invoice.php?server=<?= urlencode($server_name) ?>&group=<?= urlencode($group_id) ?>&history_id=<?= urlencode($entry['id']) ?>&download=1"
                                         class="print-button print-button--link">Boleto</a>
-                                    <form method="post" class="invoice-status-form" onsubmit="return confirm('Deseja realmente excluir este boleto?');">
-                                        <input type="hidden" name="action" value="delete_invoice">
-                                        <input type="hidden" name="record_id" value="<?= htmlspecialchars($entry['id']) ?>">
-                                        <button type="submit" class="print-button print-button--danger">Excluir</button>
-                                    </form>
+                                    <?php if($can_edit_billing): ?>
+                                        <form method="post" class="invoice-status-form" onsubmit="return confirm('Deseja realmente excluir este boleto?');">
+                                            <input type="hidden" name="action" value="delete_invoice">
+                                            <input type="hidden" name="record_id" value="<?= htmlspecialchars($entry['id']) ?>">
+                                            <button type="submit" class="print-button print-button--danger" aria-label="Excluir boleto">Del</button>
+                                        </form>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

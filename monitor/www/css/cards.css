@@ -1222,8 +1222,10 @@
 .invoice-table-actions {
     display: flex;
     gap: 10px;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
+    min-width: 260px;
+    font-size: 0.85rem;
 }
 
 .invoice-table-actions .invoice-status-form,
