@@ -102,7 +102,7 @@ try {
         <?php if($api_error): ?>
             <div class="api-alert">
                 <strong>Sem conectividade</strong>
-                <p>Nao foi possivel carregar os dados do servidor <?= htmlspecialchars($server_info['name']) ?>: <?= htmlspecialchars($api_error) ?>. Tente novamente mais tarde.</p>
+                <p>Não foi possível carregar os dados do servidor <?= htmlspecialchars($server_info['name']) ?>: <?= htmlspecialchars($api_error) ?>. Tente novamente mais tarde.</p>
             </div>
         <?php endif; ?>
         <div class="groups-board-header">

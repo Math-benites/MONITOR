@@ -228,11 +228,11 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
                     </a>
                 <?php else: ?>
                     <div class="api-alert">
-                        Nao foi possivel carregar as credenciais do Google.
+                        Não foi possível carregar as credenciais do Google.
                     </div>
                 <?php endif; ?>
                 <p class="login-footnote">
-                    Ao continuar, voce concorda com o uso seguro da sua conta para autenticar o acesso.
+                    Ao continuar, você concorda com o uso seguro da sua conta para autenticar o acesso.
                 </p>
             </div>
         </div>

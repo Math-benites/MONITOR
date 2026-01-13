@@ -18,7 +18,7 @@ $settings = json_decode(file_get_contents($settings_file), true);
 $servers  = $settings['servers'] ?? [];
 $planos   = json_decode(file_get_contents($planos_file), true);
 
-// ====== Controle de acesso por usuario/org ======
+// ====== Controle de acesso por usuário/org ======
 $access_error = null;
 $allowed_server_groups = [];
 $current_user = null;
@@ -46,7 +46,7 @@ function server_is_online($url) {
 }
 
 if (!file_exists($users_file) || !file_exists($orgs_file)) {
-    $access_error = 'Arquivos de acesso nao encontrados.';
+    $access_error = 'Arquivos de acesso não encontrados.';
     $servers = [];
 } else {
     $users_data = json_decode(file_get_contents($users_file), true);
@@ -62,7 +62,7 @@ if (!file_exists($users_file) || !file_exists($orgs_file)) {
     }
 
     if (!$current_user) {
-        $access_error = 'Usuario sem permissao.';
+        $access_error = 'Usuário sem permissão.';
         $servers = [];
     } else {
         $user_rule = $current_user['access']['rule'] ?? '';
@@ -83,7 +83,7 @@ if (!file_exists($users_file) || !file_exists($orgs_file)) {
             }
 
             if (!$current_org) {
-                $access_error = 'Organizacao nao encontrada.';
+                $access_error = 'Organização não encontrada.';
                 $servers = [];
             } else {
                 foreach ($current_org['servers'] ?? [] as $org_server) {
@@ -262,7 +262,7 @@ if ($server_info) {
         $total_items_api = 0;
     }
 } else {
-    $api_error = $access_error ?: 'Servidor nao autorizado.';
+    $api_error = $access_error ?: 'Servidor não autorizado.';
 }
 
 if ($api_error && $server_account && file_exists($client_profiles_file)) {
@@ -314,7 +314,7 @@ if ($api_error && $server_account && file_exists($client_profiles_file)) {
             </a>
         </div>
         <div class="topbar-user">
-            <span><?= htmlspecialchars($auth_user['name'] ?? $auth_user['username'] ?? 'Usuario') ?></span>
+            <span><?= htmlspecialchars($auth_user['name'] ?? $auth_user['username'] ?? 'Usuário') ?></span>
             <a href="/logout.php" class="topbar-logout">Logout</a>
         </div>
     </div>
@@ -323,7 +323,7 @@ if ($api_error && $server_account && file_exists($client_profiles_file)) {
     <section class="access-card">
         <header class="access-card__header">
             <h1><?= htmlspecialchars($current_org['name'] ?? '') ?></h1>
-            <p>Servicos, clientes e produtos</p>
+            <p>Serviços, clientes e produtos</p>
         </header>
 
         <div class="access-skeleton" aria-hidden="true">

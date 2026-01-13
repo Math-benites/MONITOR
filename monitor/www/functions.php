@@ -29,13 +29,13 @@ function get_server($name) {
 function zabbix_request($server_name, $method, $params) {
     $server = get_server($server_name);
     if(!$server) {
-        throw new InvalidArgumentException("Servidor '$server_name' nao encontrado.");
+        throw new InvalidArgumentException("Servidor '$server_name' não encontrado.");
     }
 
     $zabbix_url = $server['zabbix_url'] ?? '';
     $token = $server['token'] ?? '';
     if(!$zabbix_url || !$token) {
-        throw new RuntimeException("Configuracoes Zabbix invalidas para o servidor '$server_name'.");
+        throw new RuntimeException("Configurações Zabbix inválidas para o servidor '$server_name'.");
     }
 
     $payload = [
@@ -66,7 +66,7 @@ function zabbix_request($server_name, $method, $params) {
     curl_close($ch);
     $result = json_decode($response, true);
     if(json_last_error() !== JSON_ERROR_NONE) {
-        throw new RuntimeException("Resposta invalida da API Zabbix: " . json_last_error_msg());
+        throw new RuntimeException("Resposta inválida da API Zabbix: " . json_last_error_msg());
     }
 
     if(isset($result["error"])) {
